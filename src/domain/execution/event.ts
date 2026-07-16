@@ -19,6 +19,12 @@ export interface EventProps {
   occurredAt: Date;
   /** Datos inmutables del hecho. El Event no interpreta este payload. */
   payload: Record<string, unknown>;
+  /**
+   * Identidad del hecho en el sistema de origen (p. ej. el `wamid` de Meta).
+   * Opcional: los hechos internos no la tienen. Fundamento de la idempotencia
+   * ante reintentos del canal externo.
+   */
+  externalId?: string;
 }
 
 export class Event extends Entity {
@@ -52,5 +58,9 @@ export class Event extends Entity {
 
   get payload(): Readonly<Record<string, unknown>> {
     return this.props.payload;
+  }
+
+  get externalId(): string | undefined {
+    return this.props.externalId;
   }
 }

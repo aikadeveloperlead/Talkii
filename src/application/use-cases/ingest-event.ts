@@ -14,6 +14,8 @@ export interface IngestEventInput {
   sessionId: string;
   type: string;
   payload: Record<string, unknown>;
+  /** Identidad del hecho en el sistema de origen (idempotencia). */
+  externalId?: string;
 }
 
 export interface IngestEventResult {
@@ -46,6 +48,7 @@ export class IngestEvent {
       type: input.type,
       occurredAt: this.clock.now(),
       payload: input.payload,
+      externalId: input.externalId,
     });
 
     await this.events.append(event);
