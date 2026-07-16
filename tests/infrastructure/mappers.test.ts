@@ -113,6 +113,20 @@ describe("Supabase mappers · round-trip (SSOT Regla 12)", () => {
     expect(back.payload.text).toBe("hola");
   });
 
+  it("Event conserva external_id en el round-trip", () => {
+    const e = Event.create(id("e9"), {
+      sessionId: id("s1"),
+      type: "message.received",
+      occurredAt: new Date("2026-07-15T12:00:00.000Z"),
+      payload: { text: "hola" },
+      externalId: "wamid.XYZ",
+    });
+    const row = eventToRow(e);
+    expect(row.external_id).toBe("wamid.XYZ");
+    const back = rowToEvent(row);
+    expect(back.externalId).toBe("wamid.XYZ");
+  });
+
   it("Decision conserva origen, eventId y plan de acciones", () => {
     const d = Decision.create(id("d1"), {
       sessionId: id("s1"),

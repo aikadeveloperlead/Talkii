@@ -72,6 +72,7 @@ export interface EventRow {
   type: string;
   occurred_at: string;
   payload: Record<string, unknown>;
+  external_id: string | null;
 }
 export interface DecisionRow {
   id: string;
@@ -190,6 +191,7 @@ export function eventToRow(event: Event): EventRow {
     type: event.type,
     occurred_at: event.occurredAt.toISOString(),
     payload: { ...event.payload },
+    external_id: event.externalId ?? null,
   };
 }
 export function rowToEvent(row: EventRow): Event {
@@ -198,6 +200,7 @@ export function rowToEvent(row: EventRow): Event {
     type: row.type,
     occurredAt: new Date(row.occurred_at),
     payload: row.payload ?? {},
+    externalId: row.external_id ?? undefined,
   });
 }
 

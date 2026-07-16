@@ -1,5 +1,6 @@
 export type { IdGenerator } from "./id-generator";
 export type { Clock } from "./clock";
+export { DuplicateExternalEventError } from "./repositories";
 export type {
   TenantRepository,
   AgentRepository,

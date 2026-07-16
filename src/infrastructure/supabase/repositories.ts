@@ -9,6 +9,7 @@ import {
   Session,
   Tenant,
 } from "@/domain";
+import { DuplicateExternalEventError } from "@/application/ports";
 import type {
   AgentRepository,
   ConversationRepository,
@@ -159,7 +160,13 @@ export class SupabaseEventRepository implements EventRepository {
   /** Los Events son hechos consumados: solo se anexan, nunca se mutan. */
   async append(event: Event): Promise<void> {
     const { error } = await this.db.from("events").insert(eventToRow(event));
-    if (error) fail("events.insert", error);
+    if (error) {
+      // 23505 = unique_violation (índice único parcial sobre external_id).
+      if (error.code === "23505" && event.externalId) {
+        throw new DuplicateExternalEventError(event.externalId);
+      }
+      fail("events.insert", error);
+    }
   }
 
   async findById(id: Identity): Promise<Event | null> {

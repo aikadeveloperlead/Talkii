@@ -8,6 +8,7 @@ import {
   Session,
   Tenant,
 } from "@/domain";
+import { DuplicateExternalEventError } from "@/application/ports";
 import type {
   AgentRepository,
   Clock,
@@ -85,6 +86,12 @@ export class InMemorySessions implements SessionRepository {
 export class InMemoryEvents implements EventRepository {
   private store = new Map<string, Event>();
   async append(event: Event): Promise<void> {
+    if (
+      event.externalId &&
+      [...this.store.values()].some((e) => e.externalId === event.externalId)
+    ) {
+      throw new DuplicateExternalEventError(event.externalId);
+    }
     this.store.set(event.id.toString(), event);
   }
   async findById(id: Identity): Promise<Event | null> {

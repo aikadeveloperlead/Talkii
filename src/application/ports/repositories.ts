@@ -18,6 +18,18 @@ import {
  * conceptualmente todo recurso pertenece a un único Tenant (SSOT Cap. 7 §4).
  */
 
+/**
+ * Un Event con `externalId` ya ingerido: el canal externo reintentó la entrega
+ * (p. ej. reintentos del webhook de Meta). El caso de uso lo trata como
+ * idempotencia, no como fallo.
+ */
+export class DuplicateExternalEventError extends Error {
+  constructor(externalId: string) {
+    super(`Event duplicado: external_id=${externalId} ya fue ingerido`);
+    this.name = "DuplicateExternalEventError";
+  }
+}
+
 export interface TenantRepository {
   save(tenant: Tenant): Promise<void>;
   findById(id: Identity): Promise<Tenant | null>;
