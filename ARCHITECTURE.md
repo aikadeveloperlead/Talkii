@@ -54,6 +54,12 @@ Núcleo estable de 7 entidades. No se agrega ninguna sin ADR.
 (capacidad de Agent), `Knowledge`, `Tool` (capacidades del Tenant/Agent),
 `Action` (producto de Decision).
 
+**ChannelBinding** no es una entidad del núcleo: es un **recurso de
+configuración del Tenant** (capacidad, como Knowledge/Tool) que vincula la
+identidad de un canal externo (p. ej. `phone_number_id` de Meta) con el
+Tenant/Agent que lo atiende. Vive como puerto en `application/ports` y tabla
+`channel_bindings` en persistencia.
+
 ## Principios permanentes (Constitución de ingeniería)
 
 - **AA-01 — Domain Before Persistence:** toda estructura de persistencia

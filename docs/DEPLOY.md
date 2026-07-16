@@ -225,3 +225,27 @@ Para cambios de esquema: crea `supabase/migrations/000X_*.sql` y aplícalo (paso
   lanza `Error`; "no existe" devuelve `null`. Nada se traga en silencio.
 - Alternativa gestionada: este mismo repo puede desplegarse en Vercel conectando el
   GitHub y definiendo las mismas variables de entorno; esta guía cubre el VPS propio.
+
+---
+
+## WhatsApp Cloud API — alta del webhook
+
+1. Aplica la migración `supabase/migrations/0002_whatsapp_channel.sql`.
+2. Registra el binding del número (con service role o SQL directo):
+   ```sql
+   insert into public.channel_bindings (tenant_id, channel, external_id, agent_id)
+   values ('<tenant-uuid>', 'whatsapp', '<phone_number_id>', '<agent-uuid>');
+   ```
+3. Define en `.env.local` (o el entorno del VPS): `WHATSAPP_VERIFY_TOKEN`,
+   `WHATSAPP_APP_SECRET`, `WHATSAPP_ACCESS_TOKEN` (ver `.env.example`).
+4. En Meta for Developers → tu app → WhatsApp → Configuration:
+   - Callback URL: `https://<tu-dominio>/api/whatsapp/webhook`
+   - Verify token: el mismo valor de `WHATSAPP_VERIFY_TOKEN`
+   - Suscríbete al campo `messages`.
+5. Prueba: envía un WhatsApp al número; en los logs de PM2 debe aparecer
+   `{"scope":"whatsapp.webhook", ..., "status":"processed"}` y llegar la
+   respuesta del agente.
+
+Notas:
+- Reintentos de Meta no duplican: la idempotencia la da `events.external_id`.
+- Un `phone_number_id` sin binding responde 200 y se loguea como `unbound`.

@@ -2,8 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   AnthropicReasoningProvider,
   ReasoningBackedDecisionEngine,
+  SupabaseChannelBindingResolver,
   SystemClock,
   UuidIdGenerator,
+  WhatsAppMessageSender,
 } from "@/infrastructure";
 import {
   SupabaseAgentRepository,
@@ -14,8 +16,18 @@ import {
   SupabaseSessionRepository,
   SupabaseTenantRepository,
 } from "@/infrastructure/supabase/repositories";
-import { IngestEvent, MakeDecision, StartConversation } from "@/application/use-cases";
-import type { ExecutionContext, IDecisionEngine } from "@/application/ports";
+import {
+  ExecuteDecision,
+  HandleInboundMessage,
+  IngestEvent,
+  MakeDecision,
+  StartConversation,
+} from "@/application/use-cases";
+import type {
+  ExecutionContext,
+  IDecisionEngine,
+  MessageSender,
+} from "@/application/ports";
 
 /**
  * Composition Root de la capa `app`: ensambla los casos de uso con sus
@@ -27,6 +39,8 @@ export interface Container {
   startConversation: StartConversation;
   ingestEvent: IngestEvent;
   makeDecision: MakeDecision;
+  executeDecision: ExecuteDecision;
+  handleInboundMessage: HandleInboundMessage;
 }
 
 export interface ContainerOptions {
@@ -36,6 +50,8 @@ export interface ContainerOptions {
    * forma perezosa (AA-02: el origen de la decisión es intercambiable).
    */
   decisionEngine?: IDecisionEngine;
+  /** Permite inyectar un sender falso en tests; por defecto WhatsApp Cloud API. */
+  messageSender?: MessageSender;
 }
 
 export function createContainer(db: SupabaseClient, options: ContainerOptions = {}): Container {
@@ -59,10 +75,30 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
       () => new ReasoningBackedDecisionEngine(new AnthropicReasoningProvider(), ids),
     );
 
+  const bindings = new SupabaseChannelBindingResolver(db);
+  const sender = options.messageSender ?? new WhatsAppMessageSender();
+
+  const startConversation = new StartConversation(ids, clock, conversations, sessions);
+  const ingestEvent = new IngestEvent(ids, clock, sessions, events);
+  const makeDecision = new MakeDecision(engine, events, sessions, agents, funnels, decisions);
+  const executeDecision = new ExecuteDecision(ids, clock, decisions, events, sender);
+
   return {
-    startConversation: new StartConversation(ids, clock, conversations, sessions),
-    ingestEvent: new IngestEvent(ids, clock, sessions, events),
-    makeDecision: new MakeDecision(engine, events, sessions, agents, funnels, decisions),
+    startConversation,
+    ingestEvent,
+    makeDecision,
+    executeDecision,
+    handleInboundMessage: new HandleInboundMessage(
+      bindings,
+      conversations,
+      sessions,
+      ids,
+      clock,
+      startConversation,
+      ingestEvent,
+      makeDecision,
+      executeDecision,
+    ),
   };
 }
 
