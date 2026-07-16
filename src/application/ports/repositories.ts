@@ -7,6 +7,7 @@ import {
   Identity,
   Session,
   Tenant,
+  type Channel,
 } from "@/domain";
 
 /**
@@ -48,11 +49,19 @@ export interface FunnelRepository {
 export interface ConversationRepository {
   save(conversation: Conversation): Promise<void>;
   findById(id: Identity): Promise<Conversation | null>;
+  /** Relación existente con un participante en un canal (p. ej. wa_id). */
+  findByParticipant(
+    tenantId: Identity,
+    channel: Channel,
+    handle: string,
+  ): Promise<Conversation | null>;
 }
 
 export interface SessionRepository {
   save(session: Session): Promise<void>;
   findById(id: Identity): Promise<Session | null>;
+  /** Session activa más reciente de la Conversation, o null si no hay. */
+  findActiveByConversation(conversationId: Identity): Promise<Session | null>;
 }
 
 export interface EventRepository {
@@ -63,5 +72,6 @@ export interface EventRepository {
 
 export interface DecisionRepository {
   save(decision: Decision): Promise<void>;
+  findById(id: Identity): Promise<Decision | null>;
   findBySession(sessionId: Identity): Promise<Decision[]>;
 }

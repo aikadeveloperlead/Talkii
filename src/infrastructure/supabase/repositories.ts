@@ -8,6 +8,7 @@ import {
   Identity,
   Session,
   Tenant,
+  type Channel,
 } from "@/domain";
 import { DuplicateExternalEventError } from "@/application/ports";
 import type {
@@ -133,6 +134,23 @@ export class SupabaseConversationRepository implements ConversationRepository {
     if (error) fail("conversations.select", error);
     return data ? rowToConversation(data as ConversationRow) : null;
   }
+
+  async findByParticipant(
+    tenantId: Identity,
+    channel: Channel,
+    handle: string,
+  ): Promise<Conversation | null> {
+    const { data, error } = await this.db
+      .from("conversations")
+      .select("*")
+      .eq("tenant_id", tenantId.toString())
+      .eq("channel", channel)
+      .contains("participants", JSON.stringify([{ channelHandle: handle }]))
+      .limit(1)
+      .maybeSingle();
+    if (error) fail("conversations.select", error);
+    return data ? rowToConversation(data as ConversationRow) : null;
+  }
 }
 
 export class SupabaseSessionRepository implements SessionRepository {
@@ -148,6 +166,21 @@ export class SupabaseSessionRepository implements SessionRepository {
       .from("sessions")
       .select("*")
       .eq("id", id.toString())
+      .maybeSingle();
+    if (error) fail("sessions.select", error);
+    return data ? rowToSession(data as SessionRow) : null;
+  }
+
+  async findActiveByConversation(
+    conversationId: Identity,
+  ): Promise<Session | null> {
+    const { data, error } = await this.db
+      .from("sessions")
+      .select("*")
+      .eq("conversation_id", conversationId.toString())
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (error) fail("sessions.select", error);
     return data ? rowToSession(data as SessionRow) : null;
@@ -198,6 +231,16 @@ export class SupabaseDecisionRepository implements DecisionRepository {
       .from("decisions")
       .upsert(decisionToRow(decision));
     if (error) fail("decisions.upsert", error);
+  }
+
+  async findById(id: Identity): Promise<Decision | null> {
+    const { data, error } = await this.db
+      .from("decisions")
+      .select("*")
+      .eq("id", id.toString())
+      .maybeSingle();
+    if (error) fail("decisions.select", error);
+    return data ? rowToDecision(data as DecisionRow) : null;
   }
 
   async findBySession(sessionId: Identity): Promise<Decision[]> {

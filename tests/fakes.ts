@@ -7,6 +7,7 @@ import {
   Identity,
   Session,
   Tenant,
+  type Channel,
 } from "@/domain";
 import { DuplicateExternalEventError } from "@/application/ports";
 import type {
@@ -75,12 +76,35 @@ export class InMemoryConversations implements ConversationRepository {
   private repo = makeMapRepo<Conversation>();
   save = this.repo.save;
   findById = this.repo.findById;
+  async findByParticipant(
+    tenantId: Identity,
+    channel: Channel,
+    handle: string,
+  ): Promise<Conversation | null> {
+    return (
+      [...this.repo.store.values()].find(
+        (c) =>
+          c.tenantId.equals(tenantId) &&
+          c.channel === channel &&
+          c.participants.some((p) => p.channelHandle === handle),
+      ) ?? null
+    );
+  }
 }
 
 export class InMemorySessions implements SessionRepository {
   private repo = makeMapRepo<Session>();
   save = this.repo.save;
   findById = this.repo.findById;
+  async findActiveByConversation(
+    conversationId: Identity,
+  ): Promise<Session | null> {
+    return (
+      [...this.repo.store.values()].find(
+        (s) => s.conversationId.equals(conversationId) && s.isActive,
+      ) ?? null
+    );
+  }
 }
 
 export class InMemoryEvents implements EventRepository {
@@ -108,6 +132,9 @@ export class InMemoryDecisions implements DecisionRepository {
   store = new Map<string, Decision>();
   async save(decision: Decision): Promise<void> {
     this.store.set(decision.id.toString(), decision);
+  }
+  async findById(id: Identity): Promise<Decision | null> {
+    return this.store.get(id.toString()) ?? null;
   }
   async findBySession(sessionId: Identity): Promise<Decision[]> {
     return [...this.store.values()].filter((d) =>
