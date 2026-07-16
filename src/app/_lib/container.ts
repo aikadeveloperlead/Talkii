@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { SystemClock, UuidIdGenerator } from "@/infrastructure";
+import {
+  AnthropicReasoningProvider,
+  ReasoningBackedDecisionEngine,
+  SystemClock,
+  UuidIdGenerator,
+} from "@/infrastructure";
 import {
   SupabaseAgentRepository,
   SupabaseConversationRepository,
@@ -10,7 +15,7 @@ import {
   SupabaseTenantRepository,
 } from "@/infrastructure/supabase/repositories";
 import { IngestEvent, MakeDecision, StartConversation } from "@/application/use-cases";
-import type { IDecisionEngine } from "@/application/ports";
+import type { ExecutionContext, IDecisionEngine } from "@/application/ports";
 
 /**
  * Composition Root de la capa `app`: ensambla los casos de uso con sus
@@ -21,11 +26,19 @@ import type { IDecisionEngine } from "@/application/ports";
 export interface Container {
   startConversation: StartConversation;
   ingestEvent: IngestEvent;
-  /** Requiere un IDecisionEngine concreto (aún pendiente de implementar). */
-  makeDecision(engine: IDecisionEngine): MakeDecision;
+  makeDecision: MakeDecision;
 }
 
-export function createContainer(db: SupabaseClient): Container {
+export interface ContainerOptions {
+  /**
+   * Permite inyectar un Decision Engine (p. ej. determinista en tests). Si se
+   * omite, se usa el engine respaldado por razonamiento Anthropic, construido de
+   * forma perezosa (AA-02: el origen de la decisión es intercambiable).
+   */
+  decisionEngine?: IDecisionEngine;
+}
+
+export function createContainer(db: SupabaseClient, options: ContainerOptions = {}): Container {
   const ids = new UuidIdGenerator();
   const clock = new SystemClock();
 
@@ -38,10 +51,28 @@ export function createContainer(db: SupabaseClient): Container {
   const decisions = new SupabaseDecisionRepository(db);
   void tenants; // disponible para casos de uso de aprovisionamiento (pendientes).
 
+  // El proveedor Anthropic exige ANTHROPIC_API_KEY; se construye solo al primer
+  // `decide` para que montar el container no dependa de esa clave.
+  const engine =
+    options.decisionEngine ??
+    lazyDecisionEngine(
+      () => new ReasoningBackedDecisionEngine(new AnthropicReasoningProvider(), ids),
+    );
+
   return {
     startConversation: new StartConversation(ids, clock, conversations, sessions),
     ingestEvent: new IngestEvent(ids, clock, sessions, events),
-    makeDecision: (engine: IDecisionEngine) =>
-      new MakeDecision(engine, events, sessions, agents, funnels, decisions),
+    makeDecision: new MakeDecision(engine, events, sessions, agents, funnels, decisions),
+  };
+}
+
+/** Envuelve un IDecisionEngine cuya construcción se difiere al primer `decide`. */
+function lazyDecisionEngine(factory: () => IDecisionEngine): IDecisionEngine {
+  let inner: IDecisionEngine | undefined;
+  return {
+    decide(context: ExecutionContext) {
+      inner ??= factory();
+      return inner.decide(context);
+    },
   };
 }

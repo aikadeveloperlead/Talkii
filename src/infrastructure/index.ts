@@ -17,3 +17,10 @@ export {
   SupabaseEventRepository,
   SupabaseDecisionRepository,
 } from "./supabase/repositories";
+
+// ── Razonamiento + Decision Engine (AA-02) ──
+export { ReasoningBackedDecisionEngine } from "./decision/reasoning-backed-decision-engine";
+export {
+  AnthropicReasoningProvider,
+  type AnthropicOptions,
+} from "./reasoning/anthropic-reasoning-provider";
