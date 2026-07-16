@@ -26,6 +26,11 @@ export {
 } from "./reasoning/anthropic-reasoning-provider";
 
 // ── WhatsApp Cloud API ──
+export {
+  WhatsAppMessageSender,
+  type WhatsAppSenderOptions,
+} from "./whatsapp/whatsapp-message-sender";
+export { SupabaseChannelBindingResolver } from "./supabase/channel-binding-resolver";
 export { verifyWebhookSignature } from "./whatsapp/verify-signature";
 export {
   parseWebhookPayload,
