@@ -20,6 +20,9 @@ import type {
   FunnelRepository,
   IDecisionEngine,
   IdGenerator,
+  MessageSender,
+  MessageSendResult,
+  OutboundMessage,
   SessionRepository,
   TenantRepository,
 } from "@/application/ports";
@@ -140,6 +143,15 @@ export class InMemoryDecisions implements DecisionRepository {
     return [...this.store.values()].filter((d) =>
       d.sessionId.equals(sessionId),
     );
+  }
+}
+
+/** MessageSender falso: registra los envíos y devuelve wamids sintéticos. */
+export class FakeMessageSender implements MessageSender {
+  sent: OutboundMessage[] = [];
+  async send(message: OutboundMessage): Promise<MessageSendResult> {
+    this.sent.push(message);
+    return { externalMessageId: `wamid.out-${this.sent.length}` };
   }
 }
 
