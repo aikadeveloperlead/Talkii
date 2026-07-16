@@ -12,6 +12,8 @@ import {
 import { DuplicateExternalEventError } from "@/application/ports";
 import type {
   AgentRepository,
+  ChannelBinding,
+  ChannelBindingResolver,
   Clock,
   ConversationRepository,
   DecisionRepository,
@@ -142,6 +144,21 @@ export class InMemoryDecisions implements DecisionRepository {
   async findBySession(sessionId: Identity): Promise<Decision[]> {
     return [...this.store.values()].filter((d) =>
       d.sessionId.equals(sessionId),
+    );
+  }
+}
+
+/** Resolver de bindings en memoria, precargado por el test. */
+export class InMemoryChannelBindings implements ChannelBindingResolver {
+  constructor(private readonly bindings: ChannelBinding[] = []) {}
+  async findByChannelIdentity(
+    channel: Channel,
+    externalId: string,
+  ): Promise<ChannelBinding | null> {
+    return (
+      this.bindings.find(
+        (b) => b.channel === channel && b.externalId === externalId,
+      ) ?? null
     );
   }
 }

@@ -15,3 +15,9 @@ export type {
   ExecuteDecisionInput,
   ExecuteDecisionResult,
 } from "./execute-decision";
+
+export { HandleInboundMessage } from "./handle-inbound-message";
+export type {
+  InboundMessageInput,
+  HandleInboundMessageResult,
+} from "./handle-inbound-message";
