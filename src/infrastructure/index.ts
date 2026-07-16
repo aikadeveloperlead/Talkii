@@ -24,3 +24,10 @@ export {
   AnthropicReasoningProvider,
   type AnthropicOptions,
 } from "./reasoning/anthropic-reasoning-provider";
+
+// ── WhatsApp Cloud API ──
+export { verifyWebhookSignature } from "./whatsapp/verify-signature";
+export {
+  parseWebhookPayload,
+  type ParsedInboundMessage,
+} from "./whatsapp/parse-webhook";
