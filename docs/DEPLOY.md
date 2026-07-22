@@ -249,3 +249,24 @@ Para cambios de esquema: crea `supabase/migrations/000X_*.sql` y aplícalo (paso
 Notas:
 - Reintentos de Meta no duplican: la idempotencia la da `events.external_id`.
 - Un `phone_number_id` sin binding responde 200 y se loguea como `unbound`.
+
+---
+
+## Auth — Google OAuth + Supabase
+
+1. En [Google Cloud Console](https://console.cloud.google.com) → APIs & Services
+   → Credentials, crea un **OAuth Client ID** (tipo *Web application*).
+   Authorized redirect URI: `https://<tu-proyecto>.supabase.co/auth/v1/callback`.
+2. En Supabase → **Authentication → Providers → Google**, pega el Client ID y
+   Client Secret del paso anterior, y habilita el provider.
+3. En Supabase → **Authentication → URL Configuration**, define el **Site URL**
+   con el mismo valor que `NEXT_PUBLIC_SITE_URL` (ej. `https://talkii.tudominio.com`).
+4. En Supabase → **Authentication → Providers → Email**, **desactiva**
+   "Confirm email" para esta fase (el flujo de confirmación de email queda
+   fuera de alcance — ver `docs/superpowers/specs/2026-07-15-auth-supabase-design.md` §1).
+5. Define `NEXT_PUBLIC_SITE_URL` en `.env.local` (o el entorno del VPS).
+
+Checklist adicional para el checklist de verificación (§9): tras desplegar,
+visita `/login`, entra con Google y con email/contraseña, confirma que un
+usuario nuevo cae en `/onboarding`, que tras nombrar la organización llega a
+`/dashboard` con el nombre correcto, y que "Cerrar sesión" vuelve a `/login`.
