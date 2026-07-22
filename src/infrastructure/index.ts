@@ -31,6 +31,7 @@ export {
   type WhatsAppSenderOptions,
 } from "./whatsapp/whatsapp-message-sender";
 export { SupabaseChannelBindingResolver } from "./supabase/channel-binding-resolver";
+export { SupabaseAuthGateway } from "./supabase/auth-gateway";
 export { verifyWebhookSignature } from "./whatsapp/verify-signature";
 export {
   parseWebhookPayload,
