@@ -70,6 +70,13 @@ export async function provisionTenant(formData: FormData): Promise<void> {
     redirect("/login");
   }
 
+  const existingTenantId = (
+    user.app_metadata as Record<string, unknown> | undefined
+  )?.tenant_id as string | undefined;
+  if (existingTenantId) {
+    redirect("/dashboard");
+  }
+
   const service = createServiceClient();
   const useCase = new ProvisionTenant(
     new UuidIdGenerator(),
