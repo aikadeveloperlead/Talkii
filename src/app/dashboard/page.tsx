@@ -5,6 +5,8 @@ import { signOut } from "@/app/_lib/auth-actions";
 import { createServerSupabase } from "@/app/_lib/supabase-server";
 import styles from "./page.module.css";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const db = await createServerSupabase();
   const {
