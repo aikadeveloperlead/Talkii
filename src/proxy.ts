@@ -54,7 +54,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   const target = resolveRedirect(request.nextUrl.pathname, session);
   if (target) {
-    return NextResponse.redirect(new URL(target, request.url));
+    const redirect = NextResponse.redirect(new URL(target, request.url));
+    for (const cookie of response.cookies.getAll()) {
+      redirect.cookies.set(cookie);
+    }
+    return redirect;
   }
 
   return response;
