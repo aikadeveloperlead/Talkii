@@ -12,6 +12,7 @@ import {
 import { DuplicateExternalEventError } from "@/application/ports";
 import type {
   AgentRepository,
+  AuthGateway,
   ChannelBinding,
   ChannelBindingResolver,
   Clock,
@@ -187,5 +188,15 @@ export class StubDecisionEngine implements IDecisionEngine {
       rationale: "stub: responder al cliente",
       actions: [{ type: "reply", params: { text: "hola" } }],
     });
+  }
+}
+
+/** AuthGateway falso: registra las asignaciones; puede inyectarse para fallar. */
+export class FakeAuthGateway implements AuthGateway {
+  assignments: { userId: string; tenantId: string }[] = [];
+  constructor(private readonly failWith?: Error) {}
+  async assignTenantToUser(userId: string, tenantId: string): Promise<void> {
+    if (this.failWith) throw this.failWith;
+    this.assignments.push({ userId, tenantId });
   }
 }

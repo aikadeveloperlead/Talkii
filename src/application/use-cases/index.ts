@@ -21,3 +21,9 @@ export type {
   InboundMessageInput,
   HandleInboundMessageResult,
 } from "./handle-inbound-message";
+
+export { ProvisionTenant } from "./provision-tenant";
+export type {
+  ProvisionTenantInput,
+  ProvisionTenantResult,
+} from "./provision-tenant";
