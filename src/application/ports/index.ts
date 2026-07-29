@@ -23,3 +23,10 @@ export type {
   OutboundMessage,
   MessageSendResult,
 } from "./message-sender";
+export type {
+  CustomerRepository,
+  CustomerSearchFilters,
+  CustomerSearchResult,
+  LeadRepository,
+  CustomerTimelineRepository,
+} from "./crm-repositories";

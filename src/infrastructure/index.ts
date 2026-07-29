@@ -17,6 +17,11 @@ export {
   SupabaseEventRepository,
   SupabaseDecisionRepository,
 } from "./supabase/repositories";
+export {
+  SupabaseCustomerRepository,
+  SupabaseLeadRepository,
+  SupabaseCustomerTimelineRepository,
+} from "./supabase/crm-repositories";
 
 // ── Razonamiento + Decision Engine (AA-02) ──
 export { ReasoningBackedDecisionEngine } from "./decision/reasoning-backed-decision-engine";

@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   Agent,
   Conversation,
+  Customer,
+  CustomerTimelineEntry,
   Decision,
   DomainError,
   Event,
   Funnel,
   Identity,
+  Lead,
   Session,
   Tenant,
 } from "@/domain";
@@ -131,5 +134,83 @@ describe("Decision (SSOT Cap.7 §9)", () => {
     });
     expect(decision.eventId.equals(id("e1"))).toBe(true);
     expect(decision.source).toBe("ai-model");
+  });
+});
+
+describe("Customer (SCR-003, bounded context CRM)", () => {
+  it("exige nombre no vacío", () => {
+    expect(() =>
+      Customer.create(id("cu1"), {
+        tenantId: id("t1"),
+        firstName: "",
+        phone: "573001112233",
+        tags: [],
+      }),
+    ).toThrow(DomainError);
+  });
+
+  it("exige al menos un teléfono o un correo", () => {
+    expect(() =>
+      Customer.create(id("cu1"), {
+        tenantId: id("t1"),
+        firstName: "Nicolás",
+        tags: [],
+      }),
+    ).toThrow(DomainError);
+  });
+
+  it("withUpdatedProfile/withTags/archived reconstruyen preservando invariantes", () => {
+    const customer = Customer.create(id("cu1"), {
+      tenantId: id("t1"),
+      firstName: "Nicolás",
+      phone: "573001112233",
+      tags: [],
+    });
+
+    const updated = customer.withUpdatedProfile({ company: "Aika" });
+    expect(updated.company).toBe("Aika");
+    expect(updated.phone).toBe("573001112233");
+
+    const tagged = updated.withTags(["vip", "demo"]);
+    expect(tagged.tags).toEqual(["vip", "demo"]);
+
+    const archived = tagged.archived();
+    expect(archived.isArchived).toBe(true);
+  });
+});
+
+describe("Lead (SCR-003)", () => {
+  it("rechaza score negativo", () => {
+    expect(() =>
+      Lead.create(id("l1"), {
+        customerId: id("cu1"),
+        status: "new",
+        score: -1,
+      }),
+    ).toThrow(DomainError);
+  });
+
+  it("withStatus/withScore reconstruyen el Lead", () => {
+    const lead = Lead.create(id("l1"), {
+      customerId: id("cu1"),
+      status: "new",
+      score: 0,
+    });
+    const qualified = lead.withStatus("qualified").withScore(80);
+    expect(qualified.status).toBe("qualified");
+    expect(qualified.score).toBe(80);
+  });
+});
+
+describe("CustomerTimelineEntry (SCR-003)", () => {
+  it("exige un tipo declarado", () => {
+    expect(() =>
+      CustomerTimelineEntry.create(id("ct1"), {
+        customerId: id("cu1"),
+        type: "",
+        payload: {},
+        occurredAt: new Date(),
+      }),
+    ).toThrow(DomainError);
   });
 });

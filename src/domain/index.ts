@@ -35,3 +35,13 @@ export type {
   DecisionSource,
   Action,
 } from "./execution/decision";
+
+// ── CRM (SCR-003 — implementación propietaria de la Tool UpdateCustomer) ──
+export { Customer } from "./crm/customer";
+export type { CustomerProps } from "./crm/customer";
+
+export { Lead } from "./crm/lead";
+export type { LeadProps, LeadStatus } from "./crm/lead";
+
+export { CustomerTimelineEntry } from "./crm/customer-timeline-entry";
+export type { CustomerTimelineEntryProps } from "./crm/customer-timeline-entry";

@@ -18,6 +18,30 @@ export async function requireContainer(): Promise<Container | null> {
   return createContainer(db);
 }
 
+/**
+ * Igual que `requireContainer`, pero además resuelve el `tenantId` del claim
+ * `app_metadata.tenant_id` del JWT — NUNCA debe aceptarse un tenantId provisto
+ * por el cliente (evita que un usuario autenticado escriba datos en otro
+ * Tenant). Usado por casos de uso que crean/listan recursos sin un padre del
+ * que heredar el tenant (p. ej. CreateCustomer/ListCustomers — a diferencia
+ * de Conversation, que ya lo trae desde una Conversation existente).
+ */
+export async function requireTenantContainer(): Promise<
+  { container: Container; tenantId: string } | null
+> {
+  const db = await createServerSupabase();
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user) return null;
+
+  const tenantId = (user.app_metadata as Record<string, unknown> | undefined)
+    ?.tenant_id as string | undefined;
+  if (!tenantId) return null;
+
+  return { container: createContainer(db), tenantId };
+}
+
 export function unauthorized(): NextResponse {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }

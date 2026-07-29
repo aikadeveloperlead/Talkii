@@ -48,3 +48,23 @@ export type {
   SendOperatorMessageInput,
   SendOperatorMessageResult,
 } from "./send-operator-message";
+
+export { CreateCustomer } from "./create-customer";
+export type { CreateCustomerInput, CreateCustomerResult } from "./create-customer";
+
+export { UpdateCustomer } from "./update-customer";
+export type { UpdateCustomerInput } from "./update-customer";
+
+export { ArchiveCustomer } from "./archive-customer";
+
+export { GetCustomerDetail } from "./get-customer-detail";
+export type { CustomerDetailDTO } from "./get-customer-detail";
+
+export { ListCustomers } from "./list-customers";
+export type { ListCustomersInput, ListCustomersResult } from "./list-customers";
+
+export { UpdateLead } from "./update-lead";
+export type { UpdateLeadInput } from "./update-lead";
+
+export { UpdateCustomerTags } from "./update-customer-tags";
+export type { UpdateCustomerTagsInput } from "./update-customer-tags";

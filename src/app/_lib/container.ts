@@ -3,6 +3,9 @@ import {
   OpenAIReasoningProvider,
   ReasoningBackedDecisionEngine,
   SupabaseChannelBindingResolver,
+  SupabaseCustomerRepository,
+  SupabaseCustomerTimelineRepository,
+  SupabaseLeadRepository,
   SystemClock,
   UuidIdGenerator,
   WhatsAppMessageSender,
@@ -17,15 +20,22 @@ import {
   SupabaseTenantRepository,
 } from "@/infrastructure/supabase/repositories";
 import {
+  ArchiveCustomer,
+  CreateCustomer,
   ExecuteDecision,
   GetConversationDetail,
+  GetCustomerDetail,
   HandleInboundMessage,
   IngestEvent,
   ListConversationMessages,
+  ListCustomers,
   MakeDecision,
   SendOperatorMessage,
   SetOperatorControl,
   StartConversation,
+  UpdateCustomer,
+  UpdateCustomerTags,
+  UpdateLead,
 } from "@/application/use-cases";
 import type {
   ExecutionContext,
@@ -49,6 +59,13 @@ export interface Container {
   listConversationMessages: ListConversationMessages;
   setOperatorControl: SetOperatorControl;
   sendOperatorMessage: SendOperatorMessage;
+  createCustomer: CreateCustomer;
+  updateCustomer: UpdateCustomer;
+  archiveCustomer: ArchiveCustomer;
+  getCustomerDetail: GetCustomerDetail;
+  listCustomers: ListCustomers;
+  updateLead: UpdateLead;
+  updateCustomerTags: UpdateCustomerTags;
 }
 
 export interface ContainerOptions {
@@ -85,6 +102,10 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
 
   const bindings = new SupabaseChannelBindingResolver(db);
   const sender = options.messageSender ?? new WhatsAppMessageSender();
+
+  const customers = new SupabaseCustomerRepository(db);
+  const leads = new SupabaseLeadRepository(db);
+  const customerTimeline = new SupabaseCustomerTimelineRepository(db);
 
   const startConversation = new StartConversation(ids, clock, conversations, sessions);
   const ingestEvent = new IngestEvent(ids, clock, sessions, events);
@@ -123,6 +144,13 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
       decisions,
       executeDecision,
     ),
+    createCustomer: new CreateCustomer(ids, clock, customers, leads, customerTimeline),
+    updateCustomer: new UpdateCustomer(ids, clock, customers, customerTimeline),
+    archiveCustomer: new ArchiveCustomer(ids, clock, customers, customerTimeline),
+    getCustomerDetail: new GetCustomerDetail(customers, leads, customerTimeline),
+    listCustomers: new ListCustomers(customers),
+    updateLead: new UpdateLead(ids, clock, leads, customerTimeline),
+    updateCustomerTags: new UpdateCustomerTags(ids, clock, customers, customerTimeline),
   };
 }
 

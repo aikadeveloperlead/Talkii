@@ -1,10 +1,13 @@
 import {
   Agent,
   Conversation,
+  Customer,
+  CustomerTimelineEntry,
   Decision,
   Event,
   Funnel,
   Identity,
+  Lead,
   Session,
   Tenant,
   type Channel,
@@ -17,12 +20,17 @@ import type {
   ChannelBindingResolver,
   Clock,
   ConversationRepository,
+  CustomerRepository,
+  CustomerSearchFilters,
+  CustomerSearchResult,
+  CustomerTimelineRepository,
   DecisionRepository,
   EventRepository,
   ExecutionContext,
   FunnelRepository,
   IDecisionEngine,
   IdGenerator,
+  LeadRepository,
   MessageSender,
   MessageSendResult,
   OutboundMessage,
@@ -227,5 +235,64 @@ export class FakeAuthGateway implements AuthGateway {
     if (this.failWith) throw this.failWith;
     this.createdUsers.push({ email, password });
     return this.createUserResult;
+  }
+}
+
+// ── CRM (SCR-003) ──
+export class InMemoryCustomers implements CustomerRepository {
+  private repo = makeMapRepo<Customer>();
+  save = this.repo.save;
+  findById = this.repo.findById;
+  async findByPhone(tenantId: Identity, phone: string): Promise<Customer | null> {
+    return (
+      [...this.repo.store.values()].find(
+        (c) => c.tenantId.equals(tenantId) && c.phone === phone,
+      ) ?? null
+    );
+  }
+  async search(
+    tenantId: Identity,
+    filters: CustomerSearchFilters,
+    page: number,
+    limit: number,
+  ): Promise<CustomerSearchResult> {
+    let items = [...this.repo.store.values()].filter((c) => c.tenantId.equals(tenantId));
+    if (!filters.includeArchived) items = items.filter((c) => !c.isArchived);
+    if (filters.query) {
+      const q = filters.query.toLowerCase();
+      items = items.filter(
+        (c) =>
+          c.fullName.toLowerCase().includes(q) ||
+          c.phone?.includes(q) ||
+          c.email?.toLowerCase().includes(q),
+      );
+    }
+    if (filters.tags?.length) {
+      items = items.filter((c) => filters.tags!.every((t) => c.tags.includes(t)));
+    }
+    const total = items.length;
+    const start = (page - 1) * limit;
+    return { items: items.slice(start, start + limit), total };
+  }
+}
+
+export class InMemoryLeads implements LeadRepository {
+  private repo = makeMapRepo<Lead>();
+  save = this.repo.save;
+  findById = this.repo.findById;
+  async findByCustomerId(customerId: Identity): Promise<Lead | null> {
+    return (
+      [...this.repo.store.values()].find((l) => l.customerId.equals(customerId)) ?? null
+    );
+  }
+}
+
+export class InMemoryCustomerTimeline implements CustomerTimelineRepository {
+  store = new Map<string, CustomerTimelineEntry>();
+  async append(entry: CustomerTimelineEntry): Promise<void> {
+    this.store.set(entry.id.toString(), entry);
+  }
+  async findByCustomer(customerId: Identity): Promise<CustomerTimelineEntry[]> {
+    return [...this.store.values()].filter((e) => e.customerId.equals(customerId));
   }
 }
