@@ -191,12 +191,26 @@ export class StubDecisionEngine implements IDecisionEngine {
   }
 }
 
-/** AuthGateway falso: registra las asignaciones; puede inyectarse para fallar. */
+/** AuthGateway falso: registra las asignaciones y altas; puede inyectarse para fallar. */
 export class FakeAuthGateway implements AuthGateway {
   assignments: { userId: string; tenantId: string }[] = [];
-  constructor(private readonly failWith?: Error) {}
+  createdUsers: { email: string; password: string }[] = [];
+  constructor(
+    private readonly failWith?: Error,
+    private readonly createUserResult: { userId: string } = {
+      userId: "user-created-1",
+    },
+  ) {}
   async assignTenantToUser(userId: string, tenantId: string): Promise<void> {
     if (this.failWith) throw this.failWith;
     this.assignments.push({ userId, tenantId });
+  }
+  async createConfirmedUser(
+    email: string,
+    password: string,
+  ): Promise<{ userId: string }> {
+    if (this.failWith) throw this.failWith;
+    this.createdUsers.push({ email, password });
+    return this.createUserResult;
   }
 }

@@ -261,9 +261,14 @@ Notas:
    Client Secret del paso anterior, y habilita el provider.
 3. En Supabase → **Authentication → URL Configuration**, define el **Site URL**
    con el mismo valor que `NEXT_PUBLIC_SITE_URL` (ej. `https://talkii.tudominio.com`).
-4. En Supabase → **Authentication → Providers → Email**, **desactiva**
-   "Confirm email" para esta fase (el flujo de confirmación de email queda
-   fuera de alcance — ver `docs/superpowers/specs/2026-07-15-auth-supabase-design.md` §1).
+4. **No hace falta desactivar "Confirm email"** (ese toggle puede no existir
+   según la versión del dashboard, y el proyecto lo deja en su valor por
+   defecto: activo). El registro por email/contraseña no depende de ese ajuste
+   global: `signUpWithPassword` (`src/app/_lib/auth-actions.ts`) crea el
+   usuario vía Service Role con `auth.admin.createUser({ email_confirm: true })`
+   y hace login inmediato con `signInWithPassword`, en vez de usar el
+   `auth.signUp` público. Google OAuth tampoco se ve afectado por este ajuste
+   (las identidades OAuth llegan siempre confirmadas).
 5. Define `NEXT_PUBLIC_SITE_URL` en `.env.local` (o el entorno del VPS).
 
 Checklist adicional para el checklist de verificación (§9): tras desplegar,

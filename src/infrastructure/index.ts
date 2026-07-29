@@ -24,6 +24,10 @@ export {
   AnthropicReasoningProvider,
   type AnthropicOptions,
 } from "./reasoning/anthropic-reasoning-provider";
+export {
+  OpenAIReasoningProvider,
+  type OpenAIOptions,
+} from "./reasoning/openai-reasoning-provider";
 
 // ── WhatsApp Cloud API ──
 export {

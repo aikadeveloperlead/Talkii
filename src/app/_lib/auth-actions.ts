@@ -8,7 +8,7 @@ import {
   UuidIdGenerator,
 } from "@/infrastructure";
 import { SupabaseTenantRepository } from "@/infrastructure/supabase/repositories";
-import { ProvisionTenant } from "@/application/use-cases";
+import { ProvisionTenant, RegisterUser } from "@/application/use-cases";
 import { createServerSupabase } from "./supabase-server";
 
 export async function signInWithPassword(formData: FormData): Promise<void> {
@@ -27,9 +27,24 @@ export async function signUpWithPassword(formData: FormData): Promise<void> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 
+  // La creación de la identidad pasa por el caso de uso RegisterUser (puerto
+  // AuthGateway): la presentación no conoce `auth.admin.createUser`, solo que
+  // el alta llega confirmada de origen. El login que sigue sí necesita el
+  // cliente por-request (`createServerSupabase`) porque es el único punto
+  // acoplado a Next capaz de escribir la cookie de sesión (@supabase/ssr).
+  const registerUser = new RegisterUser(
+    new SupabaseAuthGateway(createServiceClient()),
+  );
+  try {
+    await registerUser.execute({ email, password });
+  } catch (err) {
+    console.error("signUpWithPassword: fallo al registrar el usuario", err);
+    redirect("/register?error=signup-failed");
+  }
+
   const db = await createServerSupabase();
-  const { error } = await db.auth.signUp({ email, password });
-  if (error) {
+  const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+  if (signInError) {
     redirect("/register?error=signup-failed");
   }
   redirect("/dashboard");

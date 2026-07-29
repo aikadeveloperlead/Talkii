@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  AnthropicReasoningProvider,
+  OpenAIReasoningProvider,
   ReasoningBackedDecisionEngine,
   SupabaseChannelBindingResolver,
   SystemClock,
@@ -46,7 +46,7 @@ export interface Container {
 export interface ContainerOptions {
   /**
    * Permite inyectar un Decision Engine (p. ej. determinista en tests). Si se
-   * omite, se usa el engine respaldado por razonamiento Anthropic, construido de
+   * omite, se usa el engine respaldado por razonamiento OpenAI, construido de
    * forma perezosa (AA-02: el origen de la decisión es intercambiable).
    */
   decisionEngine?: IDecisionEngine;
@@ -67,12 +67,12 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
   const decisions = new SupabaseDecisionRepository(db);
   void tenants; // disponible para casos de uso de aprovisionamiento (pendientes).
 
-  // El proveedor Anthropic exige ANTHROPIC_API_KEY; se construye solo al primer
+  // El proveedor OpenAI exige OPENAI_API_KEY; se construye solo al primer
   // `decide` para que montar el container no dependa de esa clave.
   const engine =
     options.decisionEngine ??
     lazyDecisionEngine(
-      () => new ReasoningBackedDecisionEngine(new AnthropicReasoningProvider(), ids),
+      () => new ReasoningBackedDecisionEngine(new OpenAIReasoningProvider(), ids),
     );
 
   const bindings = new SupabaseChannelBindingResolver(db);

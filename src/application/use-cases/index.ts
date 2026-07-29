@@ -27,3 +27,6 @@ export type {
   ProvisionTenantInput,
   ProvisionTenantResult,
 } from "./provision-tenant";
+
+export { RegisterUser } from "./register-user";
+export type { RegisterUserInput, RegisterUserResult } from "./register-user";
