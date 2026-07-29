@@ -134,6 +134,27 @@ export class SupabaseFunnelRepository implements FunnelRepository {
     if (error) fail("funnels.select", error);
     return data ? rowToFunnel(data as FunnelRow) : null;
   }
+
+  async findByName(tenantId: Identity, name: string): Promise<Funnel | null> {
+    const { data, error } = await this.db
+      .from("funnels")
+      .select("*")
+      .eq("tenant_id", tenantId.toString())
+      .eq("name", name)
+      .maybeSingle();
+    if (error) fail("funnels.select", error);
+    return data ? rowToFunnel(data as FunnelRow) : null;
+  }
+
+  async listByTenant(tenantId: Identity): Promise<Funnel[]> {
+    const { data, error } = await this.db
+      .from("funnels")
+      .select("*")
+      .eq("tenant_id", tenantId.toString())
+      .order("created_at", { ascending: true });
+    if (error) fail("funnels.select", error);
+    return (data as FunnelRow[]).map(rowToFunnel);
+  }
 }
 
 export class SupabaseConversationRepository implements ConversationRepository {

@@ -68,6 +68,8 @@ export interface AgentProps {
   fallbackMessage?: string;
   transferKeywords?: string[];
   captureFields?: CaptureField[];
+  /** SCR-010 FN-02: el Agent solo referencia un Funnel (FK simple, no N:N). */
+  funnelId?: Identity;
 }
 
 export class Agent extends Entity {
@@ -178,8 +180,16 @@ export class Agent extends Entity {
     return this.props.captureFields ?? [];
   }
 
+  get funnelId(): Identity | undefined {
+    return this.props.funnelId;
+  }
+
   withStatus(status: AgentStatus): Agent {
     return Agent.create(this.id, { ...this.props, status });
+  }
+
+  withFunnel(funnelId: Identity | undefined): Agent {
+    return Agent.create(this.id, { ...this.props, funnelId });
   }
 
   withEdits(

@@ -14,7 +14,11 @@ export type {
 } from "./agent-strategy/agent";
 
 export { Funnel } from "./conversational-strategy/funnel";
-export type { FunnelProps, FunnelStage } from "./conversational-strategy/funnel";
+export type {
+  FunnelProps,
+  FunnelStage,
+  FunnelStatus,
+} from "./conversational-strategy/funnel";
 
 export { Conversation } from "./conversation/conversation";
 export type {

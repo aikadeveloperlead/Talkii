@@ -110,6 +110,16 @@ export class InMemoryFunnels implements FunnelRepository {
   private repo = makeMapRepo<Funnel>();
   save = this.repo.save;
   findById = this.repo.findById;
+  async findByName(tenantId: Identity, name: string): Promise<Funnel | null> {
+    return (
+      [...this.repo.store.values()].find(
+        (f) => f.tenantId.equals(tenantId) && f.name === name,
+      ) ?? null
+    );
+  }
+  async listByTenant(tenantId: Identity): Promise<Funnel[]> {
+    return [...this.repo.store.values()].filter((f) => f.tenantId.equals(tenantId));
+  }
 }
 
 export class InMemoryConversations implements ConversationRepository {

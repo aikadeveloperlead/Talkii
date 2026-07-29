@@ -28,18 +28,22 @@ import {
   SupabaseTenantRepository,
 } from "@/infrastructure/supabase/repositories";
 import {
+  AddFunnelStep,
   ArchiveCustomer,
   ArchiveKnowledgeDocument,
   ArchiveTemplate,
+  AssignFunnelToAgent,
   CreateAgent,
   CreateAppointment,
   CreateCalendar,
   CreateCategory,
   CreateCustomer,
+  CreateFunnel,
   CreateKnowledgeDocument,
   CreateTemplate,
   DeleteAppointment,
   DeleteCategory,
+  DeleteFunnelStep,
   DuplicateAgent,
   ExecuteDecision,
   GetAgentDetail,
@@ -50,6 +54,7 @@ import {
   GetCustomerDetail,
   GetCustomerMetrics,
   GetDashboardKpis,
+  GetFunnelDetail,
   GetKnowledgeDetail,
   GetTemplateDetail,
   HandleInboundMessage,
@@ -61,19 +66,25 @@ import {
   ListCategories,
   ListConversationMessages,
   ListCustomers,
+  ListFunnels,
   ListKnowledgeDocuments,
   ListTemplates,
   MakeDecision,
+  ReorderFunnelSteps,
   RescheduleAppointment,
   SendOperatorMessage,
   SetAgentStatus,
   SetAppointmentStatus,
+  SetFunnelStatus,
   SetOperatorControl,
   StartConversation,
+  UnassignFunnelFromAgent,
   UnlinkAgentKnowledge,
   UpdateAgent,
   UpdateCustomer,
   UpdateCustomerTags,
+  UpdateFunnel,
+  UpdateFunnelStep,
   UpdateKnowledgeDocument,
   UpdateLead,
   UpdateTemplate,
@@ -140,6 +151,17 @@ export interface Container {
   listKnowledgeDocuments: ListKnowledgeDocuments;
   linkAgentKnowledge: LinkAgentKnowledge;
   unlinkAgentKnowledge: UnlinkAgentKnowledge;
+  createFunnel: CreateFunnel;
+  updateFunnel: UpdateFunnel;
+  setFunnelStatus: SetFunnelStatus;
+  addFunnelStep: AddFunnelStep;
+  updateFunnelStep: UpdateFunnelStep;
+  deleteFunnelStep: DeleteFunnelStep;
+  reorderFunnelSteps: ReorderFunnelSteps;
+  getFunnelDetail: GetFunnelDetail;
+  listFunnels: ListFunnels;
+  assignFunnelToAgent: AssignFunnelToAgent;
+  unassignFunnelFromAgent: UnassignFunnelFromAgent;
 }
 
 export interface ContainerOptions {
@@ -275,6 +297,17 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     listKnowledgeDocuments: new ListKnowledgeDocuments(knowledge),
     linkAgentKnowledge: new LinkAgentKnowledge(agents, knowledge, agentKnowledge),
     unlinkAgentKnowledge: new UnlinkAgentKnowledge(agentKnowledge),
+    createFunnel: new CreateFunnel(ids, funnels),
+    updateFunnel: new UpdateFunnel(funnels),
+    setFunnelStatus: new SetFunnelStatus(funnels),
+    addFunnelStep: new AddFunnelStep(funnels),
+    updateFunnelStep: new UpdateFunnelStep(funnels),
+    deleteFunnelStep: new DeleteFunnelStep(funnels),
+    reorderFunnelSteps: new ReorderFunnelSteps(funnels),
+    getFunnelDetail: new GetFunnelDetail(funnels),
+    listFunnels: new ListFunnels(funnels),
+    assignFunnelToAgent: new AssignFunnelToAgent(agents, funnels),
+    unassignFunnelFromAgent: new UnassignFunnelFromAgent(agents),
   };
 }
 

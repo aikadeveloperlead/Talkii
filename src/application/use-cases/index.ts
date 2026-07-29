@@ -124,3 +124,17 @@ export { GetKnowledgeDetail } from "./get-knowledge-detail";
 export { ListKnowledgeDocuments } from "./list-knowledge-documents";
 export { LinkAgentKnowledge } from "./link-agent-knowledge";
 export { UnlinkAgentKnowledge } from "./unlink-agent-knowledge";
+
+export { CreateFunnel } from "./create-funnel";
+export type { CreateFunnelInput } from "./create-funnel";
+export { UpdateFunnel } from "./update-funnel";
+export type { UpdateFunnelInput } from "./update-funnel";
+export { SetFunnelStatus } from "./set-funnel-status";
+export { AddFunnelStep } from "./add-funnel-step";
+export { UpdateFunnelStep } from "./update-funnel-step";
+export { DeleteFunnelStep } from "./delete-funnel-step";
+export { ReorderFunnelSteps } from "./reorder-funnel-steps";
+export { GetFunnelDetail } from "./get-funnel-detail";
+export { ListFunnels } from "./list-funnels";
+export { AssignFunnelToAgent } from "./assign-funnel-to-agent";
+export { UnassignFunnelFromAgent } from "./unassign-funnel-from-agent";

@@ -47,6 +47,9 @@ export interface AgentRepository {
 export interface FunnelRepository {
   save(funnel: Funnel): Promise<void>;
   findById(id: Identity): Promise<Funnel | null>;
+  /** Para validar unicidad de nombre por Tenant (SCR-010 BK-01). */
+  findByName(tenantId: Identity, name: string): Promise<Funnel | null>;
+  listByTenant(tenantId: Identity): Promise<Funnel[]>;
 }
 
 export interface ConversationRepository {
