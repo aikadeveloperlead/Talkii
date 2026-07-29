@@ -110,3 +110,17 @@ export { SetAgentStatus } from "./set-agent-status";
 export { DuplicateAgent } from "./duplicate-agent";
 export { GetAgentDetail } from "./get-agent-detail";
 export { ListAgents } from "./list-agents";
+
+export { CreateCategory } from "./create-category";
+export type { CreateCategoryInput } from "./create-category";
+export { ListCategories } from "./list-categories";
+export { DeleteCategory } from "./delete-category";
+export { CreateKnowledgeDocument } from "./create-knowledge-document";
+export type { CreateKnowledgeDocumentInput } from "./create-knowledge-document";
+export { UpdateKnowledgeDocument } from "./update-knowledge-document";
+export type { UpdateKnowledgeDocumentInput } from "./update-knowledge-document";
+export { ArchiveKnowledgeDocument } from "./archive-knowledge-document";
+export { GetKnowledgeDetail } from "./get-knowledge-detail";
+export { ListKnowledgeDocuments } from "./list-knowledge-documents";
+export { LinkAgentKnowledge } from "./link-agent-knowledge";
+export { UnlinkAgentKnowledge } from "./unlink-agent-knowledge";

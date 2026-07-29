@@ -29,6 +29,11 @@ export {
 } from "./supabase/scheduling-repositories";
 export { SupabaseReportsRepository } from "./supabase/reports-repository";
 export { SupabaseTemplateRepository } from "./supabase/template-repository";
+export {
+  SupabaseCategoryRepository,
+  SupabaseKnowledgeRepository,
+  SupabaseAgentKnowledgeRepository,
+} from "./supabase/knowledge-repositories";
 
 // ── Razonamiento + Decision Engine (AA-02) ──
 export { ReasoningBackedDecisionEngine } from "./decision/reasoning-backed-decision-engine";

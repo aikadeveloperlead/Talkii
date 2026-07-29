@@ -3,6 +3,7 @@ import {
   Appointment,
   AppointmentTimelineEntry,
   Calendar,
+  Category,
   Conversation,
   Customer,
   CustomerTimelineEntry,
@@ -10,6 +11,7 @@ import {
   Event,
   Funnel,
   Identity,
+  KnowledgeDocument,
   Lead,
   Session,
   Tenant,
@@ -40,6 +42,9 @@ import type {
   IDecisionEngine,
   IdGenerator,
   LeadRepository,
+  AgentKnowledgeRepository,
+  CategoryRepository,
+  KnowledgeRepository,
   MessageSender,
   MessageSendResult,
   OutboundMessage,
@@ -417,5 +422,46 @@ export class InMemoryTemplates implements TemplateRepository {
     return [...this.repo.store.values()].filter(
       (t) => t.tenantId.equals(tenantId) && (includeArchived || !t.isArchived),
     );
+  }
+}
+
+// ── Knowledge (SCR-009) ──
+export class InMemoryCategories implements CategoryRepository {
+  private repo = makeMapRepo<Category>();
+  save = this.repo.save;
+  findById = this.repo.findById;
+  async listByTenant(tenantId: Identity): Promise<Category[]> {
+    return [...this.repo.store.values()].filter((c) => c.tenantId.equals(tenantId));
+  }
+  async delete(id: Identity): Promise<void> {
+    this.repo.store.delete(id.toString());
+  }
+}
+
+export class InMemoryKnowledge implements KnowledgeRepository {
+  private repo = makeMapRepo<KnowledgeDocument>();
+  save = this.repo.save;
+  findById = this.repo.findById;
+  async listByTenant(tenantId: Identity, includeArchived = false): Promise<KnowledgeDocument[]> {
+    return [...this.repo.store.values()].filter(
+      (d) => d.tenantId.equals(tenantId) && (includeArchived || d.status !== "archived"),
+    );
+  }
+}
+
+export class InMemoryAgentKnowledge implements AgentKnowledgeRepository {
+  links: { agentId: Identity; knowledgeId: Identity }[] = [];
+  async link(agentId: Identity, knowledgeId: Identity): Promise<void> {
+    if (!this.links.some((l) => l.agentId.equals(agentId) && l.knowledgeId.equals(knowledgeId))) {
+      this.links.push({ agentId, knowledgeId });
+    }
+  }
+  async unlink(agentId: Identity, knowledgeId: Identity): Promise<void> {
+    this.links = this.links.filter(
+      (l) => !(l.agentId.equals(agentId) && l.knowledgeId.equals(knowledgeId)),
+    );
+  }
+  async listByAgent(agentId: Identity): Promise<Identity[]> {
+    return this.links.filter((l) => l.agentId.equals(agentId)).map((l) => l.knowledgeId);
   }
 }

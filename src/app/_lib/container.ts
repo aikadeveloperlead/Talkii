@@ -2,12 +2,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   OpenAIReasoningProvider,
   ReasoningBackedDecisionEngine,
+  SupabaseAgentKnowledgeRepository,
   SupabaseAppointmentRepository,
   SupabaseAppointmentTimelineRepository,
   SupabaseCalendarRepository,
+  SupabaseCategoryRepository,
   SupabaseChannelBindingResolver,
   SupabaseCustomerRepository,
   SupabaseCustomerTimelineRepository,
+  SupabaseKnowledgeRepository,
   SupabaseLeadRepository,
   SupabaseReportsRepository,
   SupabaseTemplateRepository,
@@ -26,13 +29,17 @@ import {
 } from "@/infrastructure/supabase/repositories";
 import {
   ArchiveCustomer,
+  ArchiveKnowledgeDocument,
   ArchiveTemplate,
   CreateAgent,
   CreateAppointment,
   CreateCalendar,
+  CreateCategory,
   CreateCustomer,
+  CreateKnowledgeDocument,
   CreateTemplate,
   DeleteAppointment,
+  DeleteCategory,
   DuplicateAgent,
   ExecuteDecision,
   GetAgentDetail,
@@ -43,14 +50,18 @@ import {
   GetCustomerDetail,
   GetCustomerMetrics,
   GetDashboardKpis,
+  GetKnowledgeDetail,
   GetTemplateDetail,
   HandleInboundMessage,
   IngestEvent,
+  LinkAgentKnowledge,
   ListAgents,
   ListAppointments,
   ListCalendars,
+  ListCategories,
   ListConversationMessages,
   ListCustomers,
+  ListKnowledgeDocuments,
   ListTemplates,
   MakeDecision,
   RescheduleAppointment,
@@ -59,9 +70,11 @@ import {
   SetAppointmentStatus,
   SetOperatorControl,
   StartConversation,
+  UnlinkAgentKnowledge,
   UpdateAgent,
   UpdateCustomer,
   UpdateCustomerTags,
+  UpdateKnowledgeDocument,
   UpdateLead,
   UpdateTemplate,
 } from "@/application/use-cases";
@@ -117,6 +130,16 @@ export interface Container {
   duplicateAgent: DuplicateAgent;
   getAgentDetail: GetAgentDetail;
   listAgents: ListAgents;
+  createCategory: CreateCategory;
+  listCategories: ListCategories;
+  deleteCategory: DeleteCategory;
+  createKnowledgeDocument: CreateKnowledgeDocument;
+  updateKnowledgeDocument: UpdateKnowledgeDocument;
+  archiveKnowledgeDocument: ArchiveKnowledgeDocument;
+  getKnowledgeDetail: GetKnowledgeDetail;
+  listKnowledgeDocuments: ListKnowledgeDocuments;
+  linkAgentKnowledge: LinkAgentKnowledge;
+  unlinkAgentKnowledge: UnlinkAgentKnowledge;
 }
 
 export interface ContainerOptions {
@@ -163,6 +186,10 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
   const appointmentTimeline = new SupabaseAppointmentTimelineRepository(db);
   const reports = new SupabaseReportsRepository(db);
   const templates = new SupabaseTemplateRepository(db);
+
+  const categories = new SupabaseCategoryRepository(db);
+  const knowledge = new SupabaseKnowledgeRepository(db);
+  const agentKnowledge = new SupabaseAgentKnowledgeRepository(db);
 
   const startConversation = new StartConversation(ids, clock, conversations, sessions);
   const ingestEvent = new IngestEvent(ids, clock, sessions, events);
@@ -238,6 +265,16 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     duplicateAgent: new DuplicateAgent(ids, agents),
     getAgentDetail: new GetAgentDetail(agents),
     listAgents: new ListAgents(agents),
+    createCategory: new CreateCategory(ids, categories),
+    listCategories: new ListCategories(categories),
+    deleteCategory: new DeleteCategory(categories),
+    createKnowledgeDocument: new CreateKnowledgeDocument(ids, knowledge),
+    updateKnowledgeDocument: new UpdateKnowledgeDocument(knowledge),
+    archiveKnowledgeDocument: new ArchiveKnowledgeDocument(knowledge),
+    getKnowledgeDetail: new GetKnowledgeDetail(knowledge),
+    listKnowledgeDocuments: new ListKnowledgeDocuments(knowledge),
+    linkAgentKnowledge: new LinkAgentKnowledge(agents, knowledge, agentKnowledge),
+    unlinkAgentKnowledge: new UnlinkAgentKnowledge(agentKnowledge),
   };
 }
 

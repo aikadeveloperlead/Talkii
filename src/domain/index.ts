@@ -71,3 +71,13 @@ export type {
   TemplateComponents,
   TemplateButton,
 } from "./templates/whatsapp-template";
+
+// ── Knowledge (SCR-009 — sin motor de embeddings, n8n removido) ──
+export { Category } from "./knowledge/category";
+export type { CategoryProps } from "./knowledge/category";
+export { KnowledgeDocument } from "./knowledge/knowledge-document";
+export type {
+  KnowledgeDocumentProps,
+  KnowledgeSourceType,
+  KnowledgeStatus,
+} from "./knowledge/knowledge-document";
