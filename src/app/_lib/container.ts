@@ -14,8 +14,11 @@ import {
   SupabaseLeadRepository,
   SupabaseReportsRepository,
   SupabaseTemplateRepository,
+  SupabaseWebhookDeliveryRepository,
+  SupabaseWebhookRepository,
   SystemClock,
   UuidIdGenerator,
+  HttpWebhookSender,
   WhatsAppMessageSender,
 } from "@/infrastructure";
 import {
@@ -41,10 +44,13 @@ import {
   CreateFunnel,
   CreateKnowledgeDocument,
   CreateTemplate,
+  CreateWebhook,
   DeleteAppointment,
   DeleteCategory,
   DeleteFunnelStep,
+  DispatchWebhookEvent,
   DuplicateAgent,
+  DuplicateWebhook,
   ExecuteDecision,
   GetAgentDetail,
   GetAppointmentDetail,
@@ -57,6 +63,7 @@ import {
   GetFunnelDetail,
   GetKnowledgeDetail,
   GetTemplateDetail,
+  GetWebhookDetail,
   HandleInboundMessage,
   IngestEvent,
   LinkAgentKnowledge,
@@ -69,6 +76,8 @@ import {
   ListFunnels,
   ListKnowledgeDocuments,
   ListTemplates,
+  ListWebhookDeliveries,
+  ListWebhooks,
   MakeDecision,
   ReorderFunnelSteps,
   RescheduleAppointment,
@@ -77,6 +86,7 @@ import {
   SetAppointmentStatus,
   SetFunnelStatus,
   SetOperatorControl,
+  SetWebhookStatus,
   StartConversation,
   UnassignFunnelFromAgent,
   UnlinkAgentKnowledge,
@@ -88,6 +98,7 @@ import {
   UpdateKnowledgeDocument,
   UpdateLead,
   UpdateTemplate,
+  UpdateWebhook,
 } from "@/application/use-cases";
 import type {
   ExecutionContext,
@@ -162,6 +173,14 @@ export interface Container {
   listFunnels: ListFunnels;
   assignFunnelToAgent: AssignFunnelToAgent;
   unassignFunnelFromAgent: UnassignFunnelFromAgent;
+  createWebhook: CreateWebhook;
+  updateWebhook: UpdateWebhook;
+  setWebhookStatus: SetWebhookStatus;
+  duplicateWebhook: DuplicateWebhook;
+  getWebhookDetail: GetWebhookDetail;
+  listWebhooks: ListWebhooks;
+  listWebhookDeliveries: ListWebhookDeliveries;
+  dispatchWebhookEvent: DispatchWebhookEvent;
 }
 
 export interface ContainerOptions {
@@ -212,6 +231,10 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
   const categories = new SupabaseCategoryRepository(db);
   const knowledge = new SupabaseKnowledgeRepository(db);
   const agentKnowledge = new SupabaseAgentKnowledgeRepository(db);
+
+  const webhooks = new SupabaseWebhookRepository(db);
+  const webhookDeliveries = new SupabaseWebhookDeliveryRepository(db);
+  const webhookSender = new HttpWebhookSender();
 
   const startConversation = new StartConversation(ids, clock, conversations, sessions);
   const ingestEvent = new IngestEvent(ids, clock, sessions, events);
@@ -308,6 +331,20 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     listFunnels: new ListFunnels(funnels),
     assignFunnelToAgent: new AssignFunnelToAgent(agents, funnels),
     unassignFunnelFromAgent: new UnassignFunnelFromAgent(agents),
+    createWebhook: new CreateWebhook(ids, webhooks),
+    updateWebhook: new UpdateWebhook(webhooks),
+    setWebhookStatus: new SetWebhookStatus(webhooks),
+    duplicateWebhook: new DuplicateWebhook(ids, webhooks),
+    getWebhookDetail: new GetWebhookDetail(webhooks),
+    listWebhooks: new ListWebhooks(webhooks),
+    listWebhookDeliveries: new ListWebhookDeliveries(webhookDeliveries),
+    dispatchWebhookEvent: new DispatchWebhookEvent(
+      ids,
+      clock,
+      webhooks,
+      webhookDeliveries,
+      webhookSender,
+    ),
   };
 }
 

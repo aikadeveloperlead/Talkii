@@ -15,6 +15,8 @@ import {
   Lead,
   Session,
   Tenant,
+  Webhook,
+  WebhookDelivery,
   WhatsAppTemplate,
   type Channel,
 } from "@/domain";
@@ -52,6 +54,10 @@ import type {
   SessionRepository,
   TemplateRepository,
   TenantRepository,
+  WebhookDeliveryRepository,
+  WebhookDeliveryResult,
+  WebhookRepository,
+  WebhookSender,
 } from "@/application/ports";
 
 /** IdGenerator determinista: id-1, id-2, ... */
@@ -473,5 +479,44 @@ export class InMemoryAgentKnowledge implements AgentKnowledgeRepository {
   }
   async listByAgent(agentId: Identity): Promise<Identity[]> {
     return this.links.filter((l) => l.agentId.equals(agentId)).map((l) => l.knowledgeId);
+  }
+}
+
+// ── Webhooks (SCR-011) ──
+export class InMemoryWebhooks implements WebhookRepository {
+  private repo = makeMapRepo<Webhook>();
+  save = this.repo.save;
+  findById = this.repo.findById;
+  async listByTenant(tenantId: Identity): Promise<Webhook[]> {
+    return [...this.repo.store.values()].filter((w) => w.tenantId.equals(tenantId));
+  }
+  async findActiveByEvent(tenantId: Identity, eventName: string): Promise<Webhook[]> {
+    return [...this.repo.store.values()].filter(
+      (w) => w.tenantId.equals(tenantId) && w.isDeliverable && w.events.includes(eventName),
+    );
+  }
+}
+
+export class InMemoryWebhookDeliveries implements WebhookDeliveryRepository {
+  store = new Map<string, WebhookDelivery>();
+  async save(delivery: WebhookDelivery): Promise<void> {
+    this.store.set(delivery.id.toString(), delivery);
+  }
+  async listByWebhook(webhookId: Identity): Promise<WebhookDelivery[]> {
+    return [...this.store.values()].filter((d) => d.webhookId.equals(webhookId));
+  }
+}
+
+/** Sender falso: registra los envíos y devuelve un resultado configurable. */
+export class FakeWebhookSender implements WebhookSender {
+  sent: { webhook: Webhook; eventName: string; payload: Record<string, unknown> }[] = [];
+  constructor(private readonly result: WebhookDeliveryResult = { status: 200, durationMs: 10 }) {}
+  async send(
+    webhook: Webhook,
+    eventName: string,
+    payload: Record<string, unknown>,
+  ): Promise<WebhookDeliveryResult> {
+    this.sent.push({ webhook, eventName, payload });
+    return this.result;
   }
 }

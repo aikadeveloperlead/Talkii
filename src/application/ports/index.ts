@@ -43,3 +43,9 @@ export type {
   KnowledgeRepository,
   AgentKnowledgeRepository,
 } from "./knowledge-repositories";
+export type {
+  WebhookRepository,
+  WebhookDeliveryRepository,
+  WebhookDeliveryResult,
+  WebhookSender,
+} from "./webhook-repositories";

@@ -85,3 +85,12 @@ export type {
   KnowledgeSourceType,
   KnowledgeStatus,
 } from "./knowledge/knowledge-document";
+
+// ── Webhooks & Integraciones (SCR-011 — sin retries/colas/OAuth) ──
+export { Webhook } from "./webhooks/webhook";
+export type { WebhookProps, WebhookStatus } from "./webhooks/webhook";
+export { WebhookDelivery } from "./webhooks/webhook-delivery";
+export type {
+  WebhookDeliveryProps,
+  WebhookDeliveryStatus,
+} from "./webhooks/webhook-delivery";

@@ -138,3 +138,14 @@ export { GetFunnelDetail } from "./get-funnel-detail";
 export { ListFunnels } from "./list-funnels";
 export { AssignFunnelToAgent } from "./assign-funnel-to-agent";
 export { UnassignFunnelFromAgent } from "./unassign-funnel-from-agent";
+
+export { CreateWebhook } from "./create-webhook";
+export type { CreateWebhookInput } from "./create-webhook";
+export { UpdateWebhook } from "./update-webhook";
+export type { UpdateWebhookInput } from "./update-webhook";
+export { SetWebhookStatus } from "./set-webhook-status";
+export { DuplicateWebhook } from "./duplicate-webhook";
+export { GetWebhookDetail } from "./get-webhook-detail";
+export { ListWebhooks } from "./list-webhooks";
+export { ListWebhookDeliveries } from "./list-webhook-deliveries";
+export { DispatchWebhookEvent } from "./dispatch-webhook-event";
