@@ -2,6 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   OpenAIReasoningProvider,
   ReasoningBackedDecisionEngine,
+  SupabaseAppointmentRepository,
+  SupabaseAppointmentTimelineRepository,
+  SupabaseCalendarRepository,
   SupabaseChannelBindingResolver,
   SupabaseCustomerRepository,
   SupabaseCustomerTimelineRepository,
@@ -21,16 +24,24 @@ import {
 } from "@/infrastructure/supabase/repositories";
 import {
   ArchiveCustomer,
+  CreateAppointment,
+  CreateCalendar,
   CreateCustomer,
+  DeleteAppointment,
   ExecuteDecision,
+  GetAppointmentDetail,
   GetConversationDetail,
   GetCustomerDetail,
   HandleInboundMessage,
   IngestEvent,
+  ListAppointments,
+  ListCalendars,
   ListConversationMessages,
   ListCustomers,
   MakeDecision,
+  RescheduleAppointment,
   SendOperatorMessage,
+  SetAppointmentStatus,
   SetOperatorControl,
   StartConversation,
   UpdateCustomer,
@@ -66,6 +77,14 @@ export interface Container {
   listCustomers: ListCustomers;
   updateLead: UpdateLead;
   updateCustomerTags: UpdateCustomerTags;
+  createCalendar: CreateCalendar;
+  listCalendars: ListCalendars;
+  createAppointment: CreateAppointment;
+  getAppointmentDetail: GetAppointmentDetail;
+  listAppointments: ListAppointments;
+  setAppointmentStatus: SetAppointmentStatus;
+  rescheduleAppointment: RescheduleAppointment;
+  deleteAppointment: DeleteAppointment;
 }
 
 export interface ContainerOptions {
@@ -106,6 +125,10 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
   const customers = new SupabaseCustomerRepository(db);
   const leads = new SupabaseLeadRepository(db);
   const customerTimeline = new SupabaseCustomerTimelineRepository(db);
+
+  const calendars = new SupabaseCalendarRepository(db);
+  const appointments = new SupabaseAppointmentRepository(db);
+  const appointmentTimeline = new SupabaseAppointmentTimelineRepository(db);
 
   const startConversation = new StartConversation(ids, clock, conversations, sessions);
   const ingestEvent = new IngestEvent(ids, clock, sessions, events);
@@ -151,6 +174,21 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     listCustomers: new ListCustomers(customers),
     updateLead: new UpdateLead(ids, clock, leads, customerTimeline),
     updateCustomerTags: new UpdateCustomerTags(ids, clock, customers, customerTimeline),
+    createCalendar: new CreateCalendar(ids, calendars),
+    listCalendars: new ListCalendars(calendars),
+    createAppointment: new CreateAppointment(
+      ids,
+      clock,
+      calendars,
+      appointments,
+      appointmentTimeline,
+      customerTimeline,
+    ),
+    getAppointmentDetail: new GetAppointmentDetail(appointments, appointmentTimeline),
+    listAppointments: new ListAppointments(appointments),
+    setAppointmentStatus: new SetAppointmentStatus(ids, clock, appointments, appointmentTimeline),
+    rescheduleAppointment: new RescheduleAppointment(ids, clock, appointments, appointmentTimeline),
+    deleteAppointment: new DeleteAppointment(ids, clock, appointments, appointmentTimeline),
   };
 }
 

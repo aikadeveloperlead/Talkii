@@ -45,3 +45,13 @@ export type { LeadProps, LeadStatus } from "./crm/lead";
 
 export { CustomerTimelineEntry } from "./crm/customer-timeline-entry";
 export type { CustomerTimelineEntryProps } from "./crm/customer-timeline-entry";
+
+// ── Scheduling (SCR-004 — Agenda) ──
+export { Calendar } from "./scheduling/calendar";
+export type { CalendarProps } from "./scheduling/calendar";
+
+export { Appointment } from "./scheduling/appointment";
+export type { AppointmentProps, AppointmentStatus } from "./scheduling/appointment";
+
+export { AppointmentTimelineEntry } from "./scheduling/appointment-timeline-entry";
+export type { AppointmentTimelineEntryProps } from "./scheduling/appointment-timeline-entry";

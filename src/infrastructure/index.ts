@@ -22,6 +22,11 @@ export {
   SupabaseLeadRepository,
   SupabaseCustomerTimelineRepository,
 } from "./supabase/crm-repositories";
+export {
+  SupabaseCalendarRepository,
+  SupabaseAppointmentRepository,
+  SupabaseAppointmentTimelineRepository,
+} from "./supabase/scheduling-repositories";
 
 // ── Razonamiento + Decision Engine (AA-02) ──
 export { ReasoningBackedDecisionEngine } from "./decision/reasoning-backed-decision-engine";

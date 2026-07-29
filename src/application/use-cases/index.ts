@@ -68,3 +68,23 @@ export type { UpdateLeadInput } from "./update-lead";
 
 export { UpdateCustomerTags } from "./update-customer-tags";
 export type { UpdateCustomerTagsInput } from "./update-customer-tags";
+
+export { CreateCalendar } from "./create-calendar";
+export type { CreateCalendarInput } from "./create-calendar";
+
+export { ListCalendars } from "./list-calendars";
+
+export { CreateAppointment } from "./create-appointment";
+export type { CreateAppointmentInput } from "./create-appointment";
+
+export { GetAppointmentDetail } from "./get-appointment-detail";
+
+export { ListAppointments } from "./list-appointments";
+export type { ListAppointmentsInput } from "./list-appointments";
+
+export { SetAppointmentStatus } from "./set-appointment-status";
+
+export { RescheduleAppointment } from "./reschedule-appointment";
+export type { RescheduleAppointmentInput } from "./reschedule-appointment";
+
+export { DeleteAppointment } from "./delete-appointment";

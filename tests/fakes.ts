@@ -1,5 +1,8 @@
 import {
   Agent,
+  Appointment,
+  AppointmentTimelineEntry,
+  Calendar,
   Conversation,
   Customer,
   CustomerTimelineEntry,
@@ -15,7 +18,11 @@ import {
 import { DuplicateExternalEventError } from "@/application/ports";
 import type {
   AgentRepository,
+  AppointmentRepository,
+  AppointmentSearchFilters,
+  AppointmentTimelineRepository,
   AuthGateway,
+  CalendarRepository,
   ChannelBinding,
   ChannelBindingResolver,
   Clock,
@@ -294,5 +301,63 @@ export class InMemoryCustomerTimeline implements CustomerTimelineRepository {
   }
   async findByCustomer(customerId: Identity): Promise<CustomerTimelineEntry[]> {
     return [...this.store.values()].filter((e) => e.customerId.equals(customerId));
+  }
+}
+
+// ── Scheduling (SCR-004) ──
+export class InMemoryCalendars implements CalendarRepository {
+  private repo = makeMapRepo<Calendar>();
+  save = this.repo.save;
+  findById = this.repo.findById;
+  async listByTenant(tenantId: Identity): Promise<Calendar[]> {
+    return [...this.repo.store.values()].filter((c) => c.tenantId.equals(tenantId));
+  }
+}
+
+export class InMemoryAppointments implements AppointmentRepository {
+  private repo = makeMapRepo<Appointment>();
+  save = this.repo.save;
+  findById = this.repo.findById;
+  async findOverlapping(
+    calendarId: Identity,
+    startsAt: Date,
+    endsAt: Date,
+    excludeId?: Identity,
+  ): Promise<Appointment[]> {
+    return [...this.repo.store.values()].filter(
+      (a) =>
+        a.calendarId.equals(calendarId) &&
+        !a.isDeleted &&
+        a.status !== "cancelled" &&
+        !(excludeId && a.id.equals(excludeId)) &&
+        a.overlaps(startsAt, endsAt),
+    );
+  }
+  async search(
+    tenantId: Identity,
+    filters: AppointmentSearchFilters,
+    page: number,
+    limit: number,
+  ): Promise<{ items: Appointment[]; total: number }> {
+    let items = [...this.repo.store.values()].filter(
+      (a) => a.tenantId.equals(tenantId) && !a.isDeleted,
+    );
+    if (filters.calendarId) items = items.filter((a) => a.calendarId.equals(filters.calendarId!));
+    if (filters.customerId)
+      items = items.filter((a) => a.customerId?.equals(filters.customerId!));
+    if (filters.status) items = items.filter((a) => a.status === filters.status);
+    const total = items.length;
+    const start = (page - 1) * limit;
+    return { items: items.slice(start, start + limit), total };
+  }
+}
+
+export class InMemoryAppointmentTimeline implements AppointmentTimelineRepository {
+  store = new Map<string, AppointmentTimelineEntry>();
+  async append(entry: AppointmentTimelineEntry): Promise<void> {
+    this.store.set(entry.id.toString(), entry);
+  }
+  async findByAppointment(appointmentId: Identity): Promise<AppointmentTimelineEntry[]> {
+    return [...this.store.values()].filter((e) => e.appointmentId.equals(appointmentId));
   }
 }

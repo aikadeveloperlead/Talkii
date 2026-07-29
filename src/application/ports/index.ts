@@ -30,3 +30,9 @@ export type {
   LeadRepository,
   CustomerTimelineRepository,
 } from "./crm-repositories";
+export type {
+  CalendarRepository,
+  AppointmentRepository,
+  AppointmentSearchFilters,
+  AppointmentTimelineRepository,
+} from "./scheduling-repositories";
