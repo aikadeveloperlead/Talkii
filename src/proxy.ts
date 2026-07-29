@@ -2,7 +2,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { resolveRedirect, type ProxySession } from "@/app/_lib/resolve-redirect";
+import {
+  isSessionIndependent,
+  resolveRedirect,
+  type ProxySession,
+} from "@/app/_lib/resolve-redirect";
 
 /**
  * Proxy (Next 16 — reemplaza `middleware`): refresca la sesión de Supabase en
@@ -12,6 +16,12 @@ import { resolveRedirect, type ProxySession } from "@/app/_lib/resolve-redirect"
  * guía de autenticación: Proxy es un chequeo optimista, no la única defensa).
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
+  // Rutas cuya decisión de enrutamiento no depende de la sesión (p. ej. el
+  // webhook de WhatsApp, alto volumen): evita el roundtrip a Supabase Auth.
+  if (isSessionIndependent(request.nextUrl.pathname)) {
+    return NextResponse.next({ request });
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {

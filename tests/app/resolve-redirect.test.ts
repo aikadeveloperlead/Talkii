@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveRedirect, type ProxySession } from "@/app/_lib/resolve-redirect";
+import {
+  isSessionIndependent,
+  resolveRedirect,
+  type ProxySession,
+} from "@/app/_lib/resolve-redirect";
 
 const anon: ProxySession = null;
 const noTenant: ProxySession = { userId: "u1", tenantId: null };
@@ -39,5 +43,26 @@ describe("resolveRedirect (proxy — SSOT diseño auth)", () => {
 
   it("autenticado con tenant en ruta protegida -> pasa (null)", () => {
     expect(resolveRedirect("/dashboard", withTenant)).toBeNull();
+  });
+
+  it("autenticado sin tenant en /login o /register -> /onboarding", () => {
+    expect(resolveRedirect("/login", noTenant)).toBe("/onboarding");
+    expect(resolveRedirect("/register", noTenant)).toBe("/onboarding");
+  });
+});
+
+describe("isSessionIndependent (proxy — evita getUser() donde el resultado nunca cambia)", () => {
+  it("rutas cuya decisión no depende de la sesión -> true", () => {
+    expect(isSessionIndependent("/")).toBe(true);
+    expect(isSessionIndependent("/api/health")).toBe(true);
+    expect(isSessionIndependent("/auth/callback")).toBe(true);
+    expect(isSessionIndependent("/api/whatsapp/webhook")).toBe(true);
+  });
+
+  it("rutas cuya decisión depende de la sesión -> false", () => {
+    expect(isSessionIndependent("/login")).toBe(false);
+    expect(isSessionIndependent("/register")).toBe(false);
+    expect(isSessionIndependent("/onboarding")).toBe(false);
+    expect(isSessionIndependent("/dashboard")).toBe(false);
   });
 });
