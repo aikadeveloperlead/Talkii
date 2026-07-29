@@ -10,6 +10,7 @@ import {
   SupabaseCustomerTimelineRepository,
   SupabaseLeadRepository,
   SupabaseReportsRepository,
+  SupabaseTemplateRepository,
   SystemClock,
   UuidIdGenerator,
   WhatsAppMessageSender,
@@ -25,9 +26,11 @@ import {
 } from "@/infrastructure/supabase/repositories";
 import {
   ArchiveCustomer,
+  ArchiveTemplate,
   CreateAppointment,
   CreateCalendar,
   CreateCustomer,
+  CreateTemplate,
   DeleteAppointment,
   ExecuteDecision,
   GetAppointmentDetail,
@@ -37,12 +40,14 @@ import {
   GetCustomerDetail,
   GetCustomerMetrics,
   GetDashboardKpis,
+  GetTemplateDetail,
   HandleInboundMessage,
   IngestEvent,
   ListAppointments,
   ListCalendars,
   ListConversationMessages,
   ListCustomers,
+  ListTemplates,
   MakeDecision,
   RescheduleAppointment,
   SendOperatorMessage,
@@ -52,6 +57,7 @@ import {
   UpdateCustomer,
   UpdateCustomerTags,
   UpdateLead,
+  UpdateTemplate,
 } from "@/application/use-cases";
 import type {
   ExecutionContext,
@@ -94,6 +100,11 @@ export interface Container {
   getCustomerMetrics: GetCustomerMetrics;
   getAppointmentMetrics: GetAppointmentMetrics;
   getConversationMetrics: GetConversationMetrics;
+  createTemplate: CreateTemplate;
+  updateTemplate: UpdateTemplate;
+  archiveTemplate: ArchiveTemplate;
+  getTemplateDetail: GetTemplateDetail;
+  listTemplates: ListTemplates;
 }
 
 export interface ContainerOptions {
@@ -139,6 +150,7 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
   const appointments = new SupabaseAppointmentRepository(db);
   const appointmentTimeline = new SupabaseAppointmentTimelineRepository(db);
   const reports = new SupabaseReportsRepository(db);
+  const templates = new SupabaseTemplateRepository(db);
 
   const startConversation = new StartConversation(ids, clock, conversations, sessions);
   const ingestEvent = new IngestEvent(ids, clock, sessions, events);
@@ -203,6 +215,11 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     getCustomerMetrics: new GetCustomerMetrics(reports),
     getAppointmentMetrics: new GetAppointmentMetrics(reports),
     getConversationMetrics: new GetConversationMetrics(reports),
+    createTemplate: new CreateTemplate(ids, templates),
+    updateTemplate: new UpdateTemplate(templates),
+    archiveTemplate: new ArchiveTemplate(templates),
+    getTemplateDetail: new GetTemplateDetail(templates),
+    listTemplates: new ListTemplates(templates),
   };
 }
 

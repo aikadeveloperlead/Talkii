@@ -13,6 +13,7 @@ import {
   Lead,
   Session,
   Tenant,
+  WhatsAppTemplate,
   type Channel,
 } from "@/domain";
 import { DuplicateExternalEventError } from "@/application/ports";
@@ -44,6 +45,7 @@ import type {
   OutboundMessage,
   ReportsRepository,
   SessionRepository,
+  TemplateRepository,
   TenantRepository,
 } from "@/application/ports";
 
@@ -393,5 +395,17 @@ export class FakeReports implements ReportsRepository {
   }
   async getConversationSummary(): Promise<{ total: number; activeSessions: number }> {
     return this.conversationSummary;
+  }
+}
+
+// ── Templates (SCR-006) ──
+export class InMemoryTemplates implements TemplateRepository {
+  private repo = makeMapRepo<WhatsAppTemplate>();
+  save = this.repo.save;
+  findById = this.repo.findById;
+  async listByTenant(tenantId: Identity, includeArchived = false): Promise<WhatsAppTemplate[]> {
+    return [...this.repo.store.values()].filter(
+      (t) => t.tenantId.equals(tenantId) && (includeArchived || !t.isArchived),
+    );
   }
 }

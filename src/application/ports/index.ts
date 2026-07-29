@@ -37,3 +37,4 @@ export type {
   AppointmentTimelineRepository,
 } from "./scheduling-repositories";
 export type { ReportsRepository, DashboardKpis } from "./reports-repository";
+export type { TemplateRepository } from "./template-repository";

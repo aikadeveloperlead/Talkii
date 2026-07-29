@@ -55,3 +55,14 @@ export type { AppointmentProps, AppointmentStatus } from "./scheduling/appointme
 
 export { AppointmentTimelineEntry } from "./scheduling/appointment-timeline-entry";
 export type { AppointmentTimelineEntryProps } from "./scheduling/appointment-timeline-entry";
+
+// ── Templates (SCR-006 — Plantillas WhatsApp/Meta, ciclo Draft local) ──
+export { WhatsAppTemplate } from "./templates/whatsapp-template";
+export type {
+  WhatsAppTemplateProps,
+  TemplateCategory,
+  TemplateStatus,
+  QualityRating,
+  TemplateComponents,
+  TemplateButton,
+} from "./templates/whatsapp-template";

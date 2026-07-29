@@ -93,3 +93,11 @@ export { GetDashboardKpis } from "./get-dashboard-kpis";
 export { GetCustomerMetrics } from "./get-customer-metrics";
 export { GetAppointmentMetrics } from "./get-appointment-metrics";
 export { GetConversationMetrics } from "./get-conversation-metrics";
+
+export { CreateTemplate } from "./create-template";
+export type { CreateTemplateInput } from "./create-template";
+export { UpdateTemplate } from "./update-template";
+export type { UpdateTemplateInput } from "./update-template";
+export { ArchiveTemplate } from "./archive-template";
+export { GetTemplateDetail } from "./get-template-detail";
+export { ListTemplates } from "./list-templates";
