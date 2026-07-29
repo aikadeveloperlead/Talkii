@@ -41,6 +41,19 @@ export interface AgentRow {
   permanent_prompt: string;
   policies: Policy[];
   reasoning_profile: string;
+  status: string;
+  role: string | null;
+  personality: string | null;
+  language: string | null;
+  tone: string | null;
+  business_name: string | null;
+  business_description: string | null;
+  products_services: string | null;
+  business_type: string | null;
+  welcome_message: string | null;
+  fallback_message: string | null;
+  transfer_keywords: string[];
+  capture_fields: { key: string; label: string }[];
 }
 export interface FunnelRow {
   id: string;
@@ -101,6 +114,19 @@ export function agentToRow(agent: Agent): AgentRow {
     permanent_prompt: agent.permanentPrompt,
     policies: [...agent.policies],
     reasoning_profile: agent.reasoningProfile,
+    status: agent.status,
+    role: agent.role ?? null,
+    personality: agent.personality ?? null,
+    language: agent.language ?? null,
+    tone: agent.tone ?? null,
+    business_name: agent.businessName ?? null,
+    business_description: agent.businessDescription ?? null,
+    products_services: agent.productsServices ?? null,
+    business_type: agent.businessType ?? null,
+    welcome_message: agent.welcomeMessage ?? null,
+    fallback_message: agent.fallbackMessage ?? null,
+    transfer_keywords: [...agent.transferKeywords],
+    capture_fields: [...agent.captureFields],
   };
 }
 export function rowToAgent(row: AgentRow): Agent {
@@ -111,6 +137,19 @@ export function rowToAgent(row: AgentRow): Agent {
     permanentPrompt: row.permanent_prompt,
     policies: row.policies ?? [],
     reasoningProfile: row.reasoning_profile,
+    status: row.status as Agent["status"],
+    role: row.role ?? undefined,
+    personality: row.personality ?? undefined,
+    language: row.language ?? undefined,
+    tone: row.tone ?? undefined,
+    businessName: row.business_name ?? undefined,
+    businessDescription: row.business_description ?? undefined,
+    productsServices: row.products_services ?? undefined,
+    businessType: row.business_type ?? undefined,
+    welcomeMessage: row.welcome_message ?? undefined,
+    fallbackMessage: row.fallback_message ?? undefined,
+    transferKeywords: row.transfer_keywords ?? [],
+    captureFields: row.capture_fields ?? [],
   });
 }
 

@@ -94,6 +94,27 @@ export class SupabaseAgentRepository implements AgentRepository {
     if (error) fail("agents.select", error);
     return data ? rowToAgent(data as AgentRow) : null;
   }
+
+  async findByName(tenantId: Identity, name: string): Promise<Agent | null> {
+    const { data, error } = await this.db
+      .from("agents")
+      .select("*")
+      .eq("tenant_id", tenantId.toString())
+      .eq("name", name)
+      .maybeSingle();
+    if (error) fail("agents.select", error);
+    return data ? rowToAgent(data as AgentRow) : null;
+  }
+
+  async listByTenant(tenantId: Identity): Promise<Agent[]> {
+    const { data, error } = await this.db
+      .from("agents")
+      .select("*")
+      .eq("tenant_id", tenantId.toString())
+      .order("created_at", { ascending: true });
+    if (error) fail("agents.select", error);
+    return (data as AgentRow[]).map(rowToAgent);
+  }
 }
 
 export class SupabaseFunnelRepository implements FunnelRepository {

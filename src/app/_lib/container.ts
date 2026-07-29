@@ -27,12 +27,15 @@ import {
 import {
   ArchiveCustomer,
   ArchiveTemplate,
+  CreateAgent,
   CreateAppointment,
   CreateCalendar,
   CreateCustomer,
   CreateTemplate,
   DeleteAppointment,
+  DuplicateAgent,
   ExecuteDecision,
+  GetAgentDetail,
   GetAppointmentDetail,
   GetAppointmentMetrics,
   GetConversationDetail,
@@ -43,6 +46,7 @@ import {
   GetTemplateDetail,
   HandleInboundMessage,
   IngestEvent,
+  ListAgents,
   ListAppointments,
   ListCalendars,
   ListConversationMessages,
@@ -51,9 +55,11 @@ import {
   MakeDecision,
   RescheduleAppointment,
   SendOperatorMessage,
+  SetAgentStatus,
   SetAppointmentStatus,
   SetOperatorControl,
   StartConversation,
+  UpdateAgent,
   UpdateCustomer,
   UpdateCustomerTags,
   UpdateLead,
@@ -105,6 +111,12 @@ export interface Container {
   archiveTemplate: ArchiveTemplate;
   getTemplateDetail: GetTemplateDetail;
   listTemplates: ListTemplates;
+  createAgent: CreateAgent;
+  updateAgent: UpdateAgent;
+  setAgentStatus: SetAgentStatus;
+  duplicateAgent: DuplicateAgent;
+  getAgentDetail: GetAgentDetail;
+  listAgents: ListAgents;
 }
 
 export interface ContainerOptions {
@@ -220,6 +232,12 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     archiveTemplate: new ArchiveTemplate(templates),
     getTemplateDetail: new GetTemplateDetail(templates),
     listTemplates: new ListTemplates(templates),
+    createAgent: new CreateAgent(ids, agents),
+    updateAgent: new UpdateAgent(agents),
+    setAgentStatus: new SetAgentStatus(agents),
+    duplicateAgent: new DuplicateAgent(ids, agents),
+    getAgentDetail: new GetAgentDetail(agents),
+    listAgents: new ListAgents(agents),
   };
 }
 

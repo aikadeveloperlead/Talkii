@@ -89,6 +89,16 @@ export class InMemoryAgents implements AgentRepository {
   private repo = makeMapRepo<Agent>();
   save = this.repo.save;
   findById = this.repo.findById;
+  async findByName(tenantId: Identity, name: string): Promise<Agent | null> {
+    return (
+      [...this.repo.store.values()].find(
+        (a) => a.tenantId.equals(tenantId) && a.name === name,
+      ) ?? null
+    );
+  }
+  async listByTenant(tenantId: Identity): Promise<Agent[]> {
+    return [...this.repo.store.values()].filter((a) => a.tenantId.equals(tenantId));
+  }
 }
 
 export class InMemoryFunnels implements FunnelRepository {

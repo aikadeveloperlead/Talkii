@@ -6,7 +6,12 @@ export { Tenant } from "./identity-access/tenant";
 export type { TenantProps } from "./identity-access/tenant";
 
 export { Agent } from "./agent-strategy/agent";
-export type { AgentProps, Policy } from "./agent-strategy/agent";
+export type {
+  AgentProps,
+  Policy,
+  AgentStatus,
+  CaptureField,
+} from "./agent-strategy/agent";
 
 export { Funnel } from "./conversational-strategy/funnel";
 export type { FunnelProps, FunnelStage } from "./conversational-strategy/funnel";

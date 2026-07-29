@@ -10,6 +10,15 @@ export interface Policy {
   readonly rule: string;
 }
 
+/** CaptureField — Objeto de Valor (SCR-008 §3.5 "Captura de Datos"). */
+export interface CaptureField {
+  readonly key: string;
+  readonly label: string;
+}
+
+/** Estados del ciclo de vida del Agent (SCR-008 §4.5 / BK-03: uno solo a la vez). */
+export type AgentStatus = "draft" | "active" | "disabled" | "archived";
+
 /**
  * Agent — Entidad Estratégica (SSOT Cap. 7 §5).
  *
@@ -25,6 +34,18 @@ export interface Policy {
  * Invariante AA-02 / SSOT §5: la identidad del Agent es independiente del
  * proveedor de IA. Por eso `reasoningProfile` es una referencia abstracta
  * (una etiqueta de perfil), nunca un modelo LLM concreto.
+ *
+ * SCR-008 (Agentes IA) añade los campos de persona/negocio de la pestaña
+ * "General"/"Mensajes"/"Captura de Datos" — todos opcionales para no romper
+ * la invariante existente. Deliberadamente NO incorpora la pestaña
+ * "Configuración IA" del spec (model/api_provider/api_key/temperature/
+ * max_tokens): esos campos acoplarían el Agent a un proveedor de IA concreto,
+ * exactamente lo que `reasoningProfile` abstrae (AA-02) — permanecen a nivel
+ * de infraestructura (`OpenAIReasoningProvider`, env vars), no en esta
+ * entidad. El spec también refiere un "Workflow genérico de n8n" (n8n fue
+ * removido por completo de la arquitectura de Talkii — ver ADR — sustituido
+ * por el Decision Engine ya construido, SSOT Cap. 11); esas referencias no
+ * aplican aquí.
  */
 export interface AgentProps {
   tenantId: Identity;
@@ -34,12 +55,25 @@ export interface AgentProps {
   policies: Policy[];
   /** Perfil de razonamiento abstracto (ej. "sales-default"), no un modelo LLM. */
   reasoningProfile: string;
+  status?: AgentStatus;
+  role?: string;
+  personality?: string;
+  language?: string;
+  tone?: string;
+  businessName?: string;
+  businessDescription?: string;
+  productsServices?: string;
+  businessType?: string;
+  welcomeMessage?: string;
+  fallbackMessage?: string;
+  transferKeywords?: string[];
+  captureFields?: CaptureField[];
 }
 
 export class Agent extends Entity {
   private constructor(
     id: Identity,
-    private readonly props: AgentProps,
+    private readonly props: AgentProps & { status: AgentStatus },
   ) {
     super(id);
   }
@@ -62,6 +96,9 @@ export class Agent extends Entity {
       name: props.name.trim(),
       objective: props.objective.trim(),
       policies: [...props.policies],
+      status: props.status ?? "active",
+      transferKeywords: props.transferKeywords ? [...props.transferKeywords] : [],
+      captureFields: props.captureFields ? [...props.captureFields] : [],
     });
   }
 
@@ -87,5 +124,69 @@ export class Agent extends Entity {
 
   get reasoningProfile(): string {
     return this.props.reasoningProfile;
+  }
+
+  get status(): AgentStatus {
+    return this.props.status;
+  }
+
+  get role(): string | undefined {
+    return this.props.role;
+  }
+
+  get personality(): string | undefined {
+    return this.props.personality;
+  }
+
+  get language(): string | undefined {
+    return this.props.language;
+  }
+
+  get tone(): string | undefined {
+    return this.props.tone;
+  }
+
+  get businessName(): string | undefined {
+    return this.props.businessName;
+  }
+
+  get businessDescription(): string | undefined {
+    return this.props.businessDescription;
+  }
+
+  get productsServices(): string | undefined {
+    return this.props.productsServices;
+  }
+
+  get businessType(): string | undefined {
+    return this.props.businessType;
+  }
+
+  get welcomeMessage(): string | undefined {
+    return this.props.welcomeMessage;
+  }
+
+  get fallbackMessage(): string | undefined {
+    return this.props.fallbackMessage;
+  }
+
+  get transferKeywords(): readonly string[] {
+    return this.props.transferKeywords ?? [];
+  }
+
+  get captureFields(): readonly CaptureField[] {
+    return this.props.captureFields ?? [];
+  }
+
+  withStatus(status: AgentStatus): Agent {
+    return Agent.create(this.id, { ...this.props, status });
+  }
+
+  withEdits(
+    changes: Partial<
+      Omit<AgentProps, "tenantId" | "reasoningProfile" | "status">
+    >,
+  ): Agent {
+    return Agent.create(this.id, { ...this.props, ...changes });
   }
 }

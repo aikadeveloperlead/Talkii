@@ -101,3 +101,12 @@ export type { UpdateTemplateInput } from "./update-template";
 export { ArchiveTemplate } from "./archive-template";
 export { GetTemplateDetail } from "./get-template-detail";
 export { ListTemplates } from "./list-templates";
+
+export { CreateAgent } from "./create-agent";
+export type { CreateAgentInput } from "./create-agent";
+export { UpdateAgent } from "./update-agent";
+export type { UpdateAgentInput } from "./update-agent";
+export { SetAgentStatus } from "./set-agent-status";
+export { DuplicateAgent } from "./duplicate-agent";
+export { GetAgentDetail } from "./get-agent-detail";
+export { ListAgents } from "./list-agents";
