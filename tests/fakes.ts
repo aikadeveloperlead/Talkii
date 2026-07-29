@@ -111,6 +111,11 @@ export class InMemorySessions implements SessionRepository {
       ) ?? null
     );
   }
+  async findAllByConversation(conversationId: Identity): Promise<Session[]> {
+    return [...this.repo.store.values()].filter((s) =>
+      s.conversationId.equals(conversationId),
+    );
+  }
 }
 
 export class InMemoryEvents implements EventRepository {
@@ -159,6 +164,16 @@ export class InMemoryChannelBindings implements ChannelBindingResolver {
     return (
       this.bindings.find(
         (b) => b.channel === channel && b.externalId === externalId,
+      ) ?? null
+    );
+  }
+  async findByTenant(
+    tenantId: string,
+    channel: Channel,
+  ): Promise<ChannelBinding | null> {
+    return (
+      this.bindings.find(
+        (b) => b.tenantId === tenantId && b.channel === channel,
       ) ?? null
     );
   }

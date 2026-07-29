@@ -18,9 +18,13 @@ import {
 } from "@/infrastructure/supabase/repositories";
 import {
   ExecuteDecision,
+  GetConversationDetail,
   HandleInboundMessage,
   IngestEvent,
+  ListConversationMessages,
   MakeDecision,
+  SendOperatorMessage,
+  SetOperatorControl,
   StartConversation,
 } from "@/application/use-cases";
 import type {
@@ -41,6 +45,10 @@ export interface Container {
   makeDecision: MakeDecision;
   executeDecision: ExecuteDecision;
   handleInboundMessage: HandleInboundMessage;
+  getConversationDetail: GetConversationDetail;
+  listConversationMessages: ListConversationMessages;
+  setOperatorControl: SetOperatorControl;
+  sendOperatorMessage: SendOperatorMessage;
 }
 
 export interface ContainerOptions {
@@ -97,6 +105,22 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
       startConversation,
       ingestEvent,
       makeDecision,
+      executeDecision,
+    ),
+    getConversationDetail: new GetConversationDetail(conversations, sessions),
+    listConversationMessages: new ListConversationMessages(
+      conversations,
+      sessions,
+      events,
+    ),
+    setOperatorControl: new SetOperatorControl(sessions),
+    sendOperatorMessage: new SendOperatorMessage(
+      ids,
+      conversations,
+      sessions,
+      bindings,
+      ingestEvent,
+      decisions,
       executeDecision,
     ),
   };

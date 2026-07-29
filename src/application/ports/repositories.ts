@@ -62,6 +62,8 @@ export interface SessionRepository {
   findById(id: Identity): Promise<Session | null>;
   /** Session activa más reciente de la Conversation, o null si no hay. */
   findActiveByConversation(conversationId: Identity): Promise<Session | null>;
+  /** Todas las Sessions de la Conversation (activas o cerradas), orden cronológico. */
+  findAllByConversation(conversationId: Identity): Promise<Session[]>;
 }
 
 export interface EventRepository {

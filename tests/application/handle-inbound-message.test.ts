@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Agent, Decision, Identity } from "@/domain";
+import { Agent, Decision, Identity, Session } from "@/domain";
 import {
   ExecuteDecision,
   HandleInboundMessage,
@@ -156,5 +156,38 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
       channelExternalId: "phone-desconocido",
     });
     expect(result.status).toBe("unbound");
+  });
+
+  it("no decide ni responde si un operador tiene el control (human-controlled)", async () => {
+    const { agents, conversations, sessions, sender, useCase } = setup();
+    await seedAgent(agents);
+
+    // Primer mensaje: abre Conversation+Session y responde normalmente.
+    await useCase.execute(inbound);
+
+    const conv = await conversations.findByParticipant(
+      Identity.of(binding.tenantId),
+      "whatsapp",
+      "573001112233",
+    );
+    const active = await sessions.findActiveByConversation(conv!.id);
+    await sessions.save(
+      Session.create(active!.id, {
+        conversationId: active!.conversationId,
+        dimensions: {
+          ...active!.dimensions,
+          metadata: { ...active!.dimensions.metadata, operatorControl: true },
+        },
+      }),
+    );
+
+    const result = await useCase.execute({
+      ...inbound,
+      externalMessageId: "wamid.IN-2",
+      text: "segundo mensaje mientras el operador interviene",
+    });
+
+    expect(result.status).toBe("human-controlled");
+    expect(sender.sent).toHaveLength(1); // solo la primera respuesta automática
   });
 });

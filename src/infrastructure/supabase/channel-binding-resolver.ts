@@ -44,4 +44,21 @@ export class SupabaseChannelBindingResolver implements ChannelBindingResolver {
     }
     return data ? rowToBinding(data as ChannelBindingRow) : null;
   }
+
+  async findByTenant(
+    tenantId: string,
+    channel: Channel,
+  ): Promise<ChannelBinding | null> {
+    const { data, error } = await this.db
+      .from("channel_bindings")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("channel", channel)
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      throw new Error(`Supabase channel_bindings.select: ${error.message}`);
+    }
+    return data ? rowToBinding(data as ChannelBindingRow) : null;
+  }
 }

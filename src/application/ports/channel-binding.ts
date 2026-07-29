@@ -23,4 +23,13 @@ export interface ChannelBindingResolver {
     channel: Channel,
     externalId: string,
   ): Promise<ChannelBinding | null>;
+  /**
+   * Binding activo del Tenant para un canal (envío saliente iniciado desde
+   * Talkii, p. ej. un mensaje de operador). MVP: un binding por Tenant/canal;
+   * el soporte de múltiples números por Tenant queda fuera de este alcance.
+   */
+  findByTenant(
+    tenantId: string,
+    channel: Channel,
+  ): Promise<ChannelBinding | null>;
 }

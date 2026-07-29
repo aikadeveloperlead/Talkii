@@ -185,6 +185,16 @@ export class SupabaseSessionRepository implements SessionRepository {
     if (error) fail("sessions.select", error);
     return data ? rowToSession(data as SessionRow) : null;
   }
+
+  async findAllByConversation(conversationId: Identity): Promise<Session[]> {
+    const { data, error } = await this.db
+      .from("sessions")
+      .select("*")
+      .eq("conversation_id", conversationId.toString())
+      .order("created_at", { ascending: true });
+    if (error) fail("sessions.select", error);
+    return (data as SessionRow[]).map(rowToSession);
+  }
 }
 
 export class SupabaseEventRepository implements EventRepository {
