@@ -88,3 +88,8 @@ export { RescheduleAppointment } from "./reschedule-appointment";
 export type { RescheduleAppointmentInput } from "./reschedule-appointment";
 
 export { DeleteAppointment } from "./delete-appointment";
+
+export { GetDashboardKpis } from "./get-dashboard-kpis";
+export { GetCustomerMetrics } from "./get-customer-metrics";
+export { GetAppointmentMetrics } from "./get-appointment-metrics";
+export { GetConversationMetrics } from "./get-conversation-metrics";

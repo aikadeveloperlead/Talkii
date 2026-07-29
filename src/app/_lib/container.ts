@@ -9,6 +9,7 @@ import {
   SupabaseCustomerRepository,
   SupabaseCustomerTimelineRepository,
   SupabaseLeadRepository,
+  SupabaseReportsRepository,
   SystemClock,
   UuidIdGenerator,
   WhatsAppMessageSender,
@@ -30,8 +31,12 @@ import {
   DeleteAppointment,
   ExecuteDecision,
   GetAppointmentDetail,
+  GetAppointmentMetrics,
   GetConversationDetail,
+  GetConversationMetrics,
   GetCustomerDetail,
+  GetCustomerMetrics,
+  GetDashboardKpis,
   HandleInboundMessage,
   IngestEvent,
   ListAppointments,
@@ -85,6 +90,10 @@ export interface Container {
   setAppointmentStatus: SetAppointmentStatus;
   rescheduleAppointment: RescheduleAppointment;
   deleteAppointment: DeleteAppointment;
+  getDashboardKpis: GetDashboardKpis;
+  getCustomerMetrics: GetCustomerMetrics;
+  getAppointmentMetrics: GetAppointmentMetrics;
+  getConversationMetrics: GetConversationMetrics;
 }
 
 export interface ContainerOptions {
@@ -129,6 +138,7 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
   const calendars = new SupabaseCalendarRepository(db);
   const appointments = new SupabaseAppointmentRepository(db);
   const appointmentTimeline = new SupabaseAppointmentTimelineRepository(db);
+  const reports = new SupabaseReportsRepository(db);
 
   const startConversation = new StartConversation(ids, clock, conversations, sessions);
   const ingestEvent = new IngestEvent(ids, clock, sessions, events);
@@ -189,6 +199,10 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     setAppointmentStatus: new SetAppointmentStatus(ids, clock, appointments, appointmentTimeline),
     rescheduleAppointment: new RescheduleAppointment(ids, clock, appointments, appointmentTimeline),
     deleteAppointment: new DeleteAppointment(ids, clock, appointments, appointmentTimeline),
+    getDashboardKpis: new GetDashboardKpis(reports),
+    getCustomerMetrics: new GetCustomerMetrics(reports),
+    getAppointmentMetrics: new GetAppointmentMetrics(reports),
+    getConversationMetrics: new GetConversationMetrics(reports),
   };
 }
 

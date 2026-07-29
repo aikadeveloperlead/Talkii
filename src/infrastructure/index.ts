@@ -27,6 +27,7 @@ export {
   SupabaseAppointmentRepository,
   SupabaseAppointmentTimelineRepository,
 } from "./supabase/scheduling-repositories";
+export { SupabaseReportsRepository } from "./supabase/reports-repository";
 
 // ── Razonamiento + Decision Engine (AA-02) ──
 export { ReasoningBackedDecisionEngine } from "./decision/reasoning-backed-decision-engine";

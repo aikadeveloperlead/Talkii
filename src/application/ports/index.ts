@@ -36,3 +36,4 @@ export type {
   AppointmentSearchFilters,
   AppointmentTimelineRepository,
 } from "./scheduling-repositories";
+export type { ReportsRepository, DashboardKpis } from "./reports-repository";

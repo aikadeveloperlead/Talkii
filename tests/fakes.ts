@@ -31,6 +31,7 @@ import type {
   CustomerSearchFilters,
   CustomerSearchResult,
   CustomerTimelineRepository,
+  DashboardKpis,
   DecisionRepository,
   EventRepository,
   ExecutionContext,
@@ -41,6 +42,7 @@ import type {
   MessageSender,
   MessageSendResult,
   OutboundMessage,
+  ReportsRepository,
   SessionRepository,
   TenantRepository,
 } from "@/application/ports";
@@ -359,5 +361,37 @@ export class InMemoryAppointmentTimeline implements AppointmentTimelineRepositor
   }
   async findByAppointment(appointmentId: Identity): Promise<AppointmentTimelineEntry[]> {
     return [...this.store.values()].filter((e) => e.appointmentId.equals(appointmentId));
+  }
+}
+
+// ── Reports (SCR-005) — fake configurable directamente con el resultado esperado. ──
+export class FakeReports implements ReportsRepository {
+  constructor(
+    private readonly kpis: DashboardKpis = {
+      conversationCount: 0,
+      activeSessionCount: 0,
+      customerCount: 0,
+      appointmentCount: 0,
+      leadCount: 0,
+      wonLeadCount: 0,
+    },
+    private readonly leadsByStatus: Record<string, number> = {},
+    private readonly appointmentsByStatus: Record<string, number> = {},
+    private readonly conversationSummary: { total: number; activeSessions: number } = {
+      total: 0,
+      activeSessions: 0,
+    },
+  ) {}
+  async getDashboardKpis(): Promise<DashboardKpis> {
+    return this.kpis;
+  }
+  async getLeadsByStatus(): Promise<Record<string, number>> {
+    return this.leadsByStatus;
+  }
+  async getAppointmentsByStatus(): Promise<Record<string, number>> {
+    return this.appointmentsByStatus;
+  }
+  async getConversationSummary(): Promise<{ total: number; activeSessions: number }> {
+    return this.conversationSummary;
   }
 }
