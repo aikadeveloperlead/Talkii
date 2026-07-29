@@ -8,10 +8,12 @@ import {
   SupabaseCalendarRepository,
   SupabaseCategoryRepository,
   SupabaseChannelBindingResolver,
+  SupabaseCompanyRepository,
   SupabaseCustomerRepository,
   SupabaseCustomerTimelineRepository,
   SupabaseKnowledgeRepository,
   SupabaseLeadRepository,
+  SupabasePreferencesRepository,
   SupabaseReportsRepository,
   SupabaseTemplateRepository,
   SupabaseWebhookDeliveryRepository,
@@ -42,6 +44,12 @@ import {
   CreateCategory,
   CreateCustomer,
   CreateFunnel,
+  GetCompany,
+  GetPreferences,
+  GetWorkspace,
+  UpdateCompany,
+  UpdatePreferences,
+  UpdateWorkspace,
   CreateKnowledgeDocument,
   CreateTemplate,
   CreateWebhook,
@@ -181,6 +189,12 @@ export interface Container {
   listWebhooks: ListWebhooks;
   listWebhookDeliveries: ListWebhookDeliveries;
   dispatchWebhookEvent: DispatchWebhookEvent;
+  getWorkspace: GetWorkspace;
+  updateWorkspace: UpdateWorkspace;
+  getCompany: GetCompany;
+  updateCompany: UpdateCompany;
+  getPreferences: GetPreferences;
+  updatePreferences: UpdatePreferences;
 }
 
 export interface ContainerOptions {
@@ -205,7 +219,6 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
   const sessions = new SupabaseSessionRepository(db);
   const events = new SupabaseEventRepository(db);
   const decisions = new SupabaseDecisionRepository(db);
-  void tenants; // disponible para casos de uso de aprovisionamiento (pendientes).
 
   // El proveedor OpenAI exige OPENAI_API_KEY; se construye solo al primer
   // `decide` para que montar el container no dependa de esa clave.
@@ -234,6 +247,9 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
 
   const webhooks = new SupabaseWebhookRepository(db);
   const webhookDeliveries = new SupabaseWebhookDeliveryRepository(db);
+
+  const companies = new SupabaseCompanyRepository(db);
+  const preferencesRepo = new SupabasePreferencesRepository(db);
   const webhookSender = new HttpWebhookSender();
 
   const startConversation = new StartConversation(ids, clock, conversations, sessions);
@@ -345,6 +361,12 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
       webhookDeliveries,
       webhookSender,
     ),
+    getWorkspace: new GetWorkspace(tenants),
+    updateWorkspace: new UpdateWorkspace(tenants),
+    getCompany: new GetCompany(companies),
+    updateCompany: new UpdateCompany(ids, companies),
+    getPreferences: new GetPreferences(preferencesRepo),
+    updatePreferences: new UpdatePreferences(ids, preferencesRepo),
   };
 }
 

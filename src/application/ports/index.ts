@@ -49,3 +49,7 @@ export type {
   WebhookDeliveryResult,
   WebhookSender,
 } from "./webhook-repositories";
+export type {
+  CompanyRepository,
+  PreferencesRepository,
+} from "./administration-repositories";

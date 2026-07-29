@@ -149,3 +149,13 @@ export { GetWebhookDetail } from "./get-webhook-detail";
 export { ListWebhooks } from "./list-webhooks";
 export { ListWebhookDeliveries } from "./list-webhook-deliveries";
 export { DispatchWebhookEvent } from "./dispatch-webhook-event";
+
+export { UpdateWorkspace } from "./update-workspace";
+export type { UpdateWorkspaceInput } from "./update-workspace";
+export { GetWorkspace } from "./get-workspace";
+export { UpdateCompany } from "./update-company";
+export type { UpdateCompanyInput } from "./update-company";
+export { GetCompany } from "./get-company";
+export { UpdatePreferences } from "./update-preferences";
+export type { UpdatePreferencesInput } from "./update-preferences";
+export { GetPreferences } from "./get-preferences";

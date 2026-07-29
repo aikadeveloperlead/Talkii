@@ -32,6 +32,9 @@ import {
 export interface TenantRow {
   id: string;
   name: string;
+  description: string | null;
+  logo: string | null;
+  status: string;
 }
 export interface AgentRow {
   id: string;
@@ -103,10 +106,21 @@ export interface DecisionRow {
 
 // ── Tenant ──
 export function tenantToRow(tenant: Tenant): TenantRow {
-  return { id: tenant.id.toString(), name: tenant.name };
+  return {
+    id: tenant.id.toString(),
+    name: tenant.name,
+    description: tenant.description ?? null,
+    logo: tenant.logo ?? null,
+    status: tenant.status,
+  };
 }
 export function rowToTenant(row: TenantRow): Tenant {
-  return Tenant.create(Identity.of(row.id), { name: row.name });
+  return Tenant.create(Identity.of(row.id), {
+    name: row.name,
+    description: row.description ?? undefined,
+    logo: row.logo ?? undefined,
+    status: row.status as Tenant["status"],
+  });
 }
 
 // ── Agent ──

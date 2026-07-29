@@ -39,6 +39,10 @@ export {
   SupabaseWebhookDeliveryRepository,
 } from "./supabase/webhook-repositories";
 export { HttpWebhookSender } from "./webhooks/http-webhook-sender";
+export {
+  SupabaseCompanyRepository,
+  SupabasePreferencesRepository,
+} from "./supabase/administration-repositories";
 
 // ── Razonamiento + Decision Engine (AA-02) ──
 export { ReasoningBackedDecisionEngine } from "./decision/reasoning-backed-decision-engine";

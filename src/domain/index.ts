@@ -3,7 +3,13 @@ export * from "./shared";
 
 // ── Entidades fundamentales del dominio (SSOT Cap. 7 §3) ──
 export { Tenant } from "./identity-access/tenant";
-export type { TenantProps } from "./identity-access/tenant";
+export type { TenantProps, WorkspaceStatus } from "./identity-access/tenant";
+
+// ── Administration (SCR-012 — Workspace/Company/Preferences; Users/Roles diferidos) ──
+export { Company } from "./administration/company";
+export type { CompanyProps } from "./administration/company";
+export { Preferences } from "./administration/preferences";
+export type { PreferencesProps } from "./administration/preferences";
 
 export { Agent } from "./agent-strategy/agent";
 export type {

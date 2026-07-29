@@ -4,6 +4,7 @@ import {
   AppointmentTimelineEntry,
   Calendar,
   Category,
+  Company,
   Conversation,
   Customer,
   CustomerTimelineEntry,
@@ -13,6 +14,7 @@ import {
   Identity,
   KnowledgeDocument,
   Lead,
+  Preferences,
   Session,
   Tenant,
   Webhook,
@@ -46,7 +48,9 @@ import type {
   LeadRepository,
   AgentKnowledgeRepository,
   CategoryRepository,
+  CompanyRepository,
   KnowledgeRepository,
+  PreferencesRepository,
   MessageSender,
   MessageSendResult,
   OutboundMessage,
@@ -518,5 +522,26 @@ export class FakeWebhookSender implements WebhookSender {
   ): Promise<WebhookDeliveryResult> {
     this.sent.push({ webhook, eventName, payload });
     return this.result;
+  }
+}
+
+// ── Administration (SCR-012) ──
+export class InMemoryCompanies implements CompanyRepository {
+  private repo = makeMapRepo<Company>();
+  save = this.repo.save;
+  async findByTenant(tenantId: Identity): Promise<Company | null> {
+    return (
+      [...this.repo.store.values()].find((c) => c.tenantId.equals(tenantId)) ?? null
+    );
+  }
+}
+
+export class InMemoryPreferences implements PreferencesRepository {
+  private repo = makeMapRepo<Preferences>();
+  save = this.repo.save;
+  async findByTenant(tenantId: Identity): Promise<Preferences | null> {
+    return (
+      [...this.repo.store.values()].find((p) => p.tenantId.equals(tenantId)) ?? null
+    );
   }
 }
