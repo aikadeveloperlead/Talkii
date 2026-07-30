@@ -2,13 +2,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import {
-  createServiceClient,
-  SupabaseAuthGateway,
-  UuidIdGenerator,
-} from "@/infrastructure";
-import { SupabaseTenantRepository } from "@/infrastructure/supabase/repositories";
-import { ProvisionTenant, RegisterUser } from "@/application/use-cases";
+import { createServiceClient } from "@/infrastructure";
+import { createContainer } from "./container";
 import { createServerSupabase } from "./supabase-server";
 
 export async function signInWithPassword(formData: FormData): Promise<void> {
@@ -32,11 +27,11 @@ export async function signUpWithPassword(formData: FormData): Promise<void> {
   // el alta llega confirmada de origen. El login que sigue sí necesita el
   // cliente por-request (`createServerSupabase`) porque es el único punto
   // acoplado a Next capaz de escribir la cookie de sesión (@supabase/ssr).
-  const registerUser = new RegisterUser(
-    new SupabaseAuthGateway(createServiceClient()),
-  );
+  // registerUser exige service-role (auth.admin.createUser) — mismo Container
+  // que el resto de la app, item MEDIO #7 de la auditoría (antes era un
+  // composition root propio de este archivo).
   try {
-    await registerUser.execute({ email, password });
+    await createContainer(createServiceClient()).registerUser.execute({ email, password });
   } catch (err) {
     console.error("signUpWithPassword: fallo al registrar el usuario", err);
     redirect("/register?error=signup-failed");
@@ -92,15 +87,13 @@ export async function provisionTenant(formData: FormData): Promise<void> {
     redirect("/dashboard");
   }
 
-  const service = createServiceClient();
-  const useCase = new ProvisionTenant(
-    new UuidIdGenerator(),
-    new SupabaseTenantRepository(service),
-    new SupabaseAuthGateway(service),
-  );
-
+  // provisionTenant exige service-role (crea el Tenant y asigna el claim
+  // tenant_id vía auth.admin.*) — mismo Container que el resto de la app.
   try {
-    await useCase.execute({ userId: user.id, organizationName });
+    await createContainer(createServiceClient()).provisionTenant.execute({
+      userId: user.id,
+      organizationName,
+    });
   } catch (err) {
     console.error("provisionTenant: fallo al aprovisionar el tenant", err);
     redirect("/onboarding?error=provision-failed");

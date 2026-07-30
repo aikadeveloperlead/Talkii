@@ -6,6 +6,7 @@ import {
   SupabaseAgentKnowledgeRepository,
   SupabaseAppointmentRepository,
   SupabaseAppointmentTimelineRepository,
+  SupabaseAuthGateway,
   SupabaseCalendarRepository,
   SupabaseCategoryRepository,
   SupabaseChannelBindingResolver,
@@ -88,6 +89,8 @@ import {
   ListWebhookDeliveries,
   ListWebhooks,
   MakeDecision,
+  ProvisionTenant,
+  RegisterUser,
   ReorderFunnelSteps,
   RescheduleAppointment,
   SendOperatorMessage,
@@ -197,6 +200,15 @@ export interface Container {
   updateCompany: UpdateCompany;
   getPreferences: GetPreferences;
   updatePreferences: UpdatePreferences;
+  /**
+   * Bootstrapping de identidad (item MEDIO #7 de la auditoría: antes vivían
+   * como composition roots propios en auth-actions.ts, fuera de este único
+   * punto de ensamblaje). Requieren un `db` con service-role (auth.admin.*) —
+   * el caller decide qué cliente pasar a `createContainer`, igual que para
+   * cualquier otro caso de uso de este Container.
+   */
+  registerUser: RegisterUser;
+  provisionTenant: ProvisionTenant;
 }
 
 export interface ContainerOptions {
@@ -380,6 +392,8 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     updateCompany: new UpdateCompany(ids, companies),
     getPreferences: new GetPreferences(preferencesRepo),
     updatePreferences: new UpdatePreferences(ids, preferencesRepo),
+    registerUser: new RegisterUser(new SupabaseAuthGateway(db)),
+    provisionTenant: new ProvisionTenant(ids, tenants, new SupabaseAuthGateway(db)),
   };
 }
 
