@@ -8,7 +8,6 @@ import {
 } from "../ports/decision-engine";
 import {
   AgentRepository,
-  ConversationRepository,
   DecisionRepository,
   EventRepository,
   FunnelRepository,
