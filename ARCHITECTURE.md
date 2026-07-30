@@ -60,6 +60,34 @@ identidad de un canal externo (p. ej. `phone_number_id` de Meta) con el
 Tenant/Agent que lo atiende. Vive como puerto en `application/ports` y tabla
 `channel_bindings` en persistencia.
 
+## Bounded contexts (SSOT) → carpetas de dominio
+
+Los 13 bounded contexts del SSOT no tienen todos una carpeta 1:1 en
+`src/domain/`: algunos son proyecciones de solo lectura sobre otros
+(sin entidades propias) y otros son capabilities dentro de un contexto
+más amplio. Mapeo real (item BAJO #17 de la auditoría):
+
+| Bounded Context (SSOT) | Carpeta en `src/domain/` | Notas |
+|---|---|---|
+| Identity & Access | `identity-access` | Tenant |
+| Agent Strategy | `agent-strategy` | Agent |
+| Conversational Strategy | `conversational-strategy` | Funnel |
+| Conversation | `conversation` | Conversation |
+| Execution Runtime | `execution` | Session, Event, Decision |
+| Knowledge | `knowledge` | Category, KnowledgeDocument |
+| CRM | `crm` | Customer, Lead, CustomerTimelineEntry |
+| Channel:WhatsApp | *(sin carpeta de dominio)* | Adaptador en `infrastructure/whatsapp`; `ChannelBinding` vive como puerto (ver tabla de entidades arriba), no como carpeta de dominio propia. |
+| Marketing | `templates` | WhatsAppTemplate — capability de Marketing, no bounded context con entidad núcleo propia. |
+| Scheduling | `scheduling` | Calendar, Appointment, AppointmentTimelineEntry |
+| Automation | `webhooks` | Webhook, WebhookDelivery |
+| Reporting | *(sin carpeta de dominio)* | `ReportsRepository` (puerto read-model/CQRS en `application/ports`) agrega sobre entidades ya existentes — CERO entidades de dominio propias, CERO tabla nueva (SCR-005). |
+| Administration | `administration` | Company, Preferences (+ extensión de Tenant/Workspace) |
+
+Carpetas `entities/`, `events/`, `value-objects/` bajo `src/domain/` son
+directorios vacíos sin archivos rastreados por git (scaffolding
+abandonado, nunca tuvieron contenido) — no representan bounded
+contexts ni deben usarse como referencia.
+
 ## Principios permanentes (Constitución de ingeniería)
 
 - **AA-01 — Domain Before Persistence:** toda estructura de persistencia
