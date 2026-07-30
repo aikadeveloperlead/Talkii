@@ -85,48 +85,67 @@ export class SupabaseReportsRepository implements ReportsRepository {
   }
 
   async getLeadsByStatus(tenantId: Identity): Promise<Record<string, number>> {
-    const tid = tenantId.toString();
-    const entries = await Promise.all(
-      LEAD_STATUSES.map(async (status) => {
-        const n = await count(
-          () =>
-            this.db
-              .from("leads")
-              .select("*, customers!inner(tenant_id)", { count: "exact", head: true })
-              .eq("customers.tenant_id", tid)
-              .eq("status", status),
-          "leads.count",
-        );
-        return [status, n] as const;
-      }),
+    return this.countByStatusRpc(
+      "count_leads_by_status",
+      tenantId,
+      LEAD_STATUSES,
     );
-    return Object.fromEntries(entries);
   }
 
   async getAppointmentsByStatus(tenantId: Identity): Promise<Record<string, number>> {
-    const tid = tenantId.toString();
-    const entries = await Promise.all(
-      APPOINTMENT_STATUSES.map(async (status) => {
-        const n = await count(
-          () =>
-            this.db
-              .from("appointments")
-              .select("*", { count: "exact", head: true })
-              .eq("tenant_id", tid)
-              .is("deleted_at", null)
-              .eq("status", status),
-          "appointments.count",
-        );
-        return [status, n] as const;
-      }),
+    return this.countByStatusRpc(
+      "count_appointments_by_status",
+      tenantId,
+      APPOINTMENT_STATUSES,
     );
-    return Object.fromEntries(entries);
   }
 
+  /**
+   * Items MEDIO #9/#10 de la auditoría: antes N queries en paralelo (una por
+   * status) porque PostgREST no expone GROUP BY nativo — ahora 1 sola llamada
+   * a un RPC que agrega en el servidor (migración 0023). Se pre-llenan todos
+   * los statuses del enum en 0 para conservar la forma del resultado (el RPC
+   * solo devuelve filas para statuses con al menos 1 fila).
+   */
+  private async countByStatusRpc(
+    fn: "count_leads_by_status" | "count_appointments_by_status",
+    tenantId: Identity,
+    allStatuses: readonly string[],
+  ): Promise<Record<string, number>> {
+    const { data, error } = await this.db.rpc(fn, { p_tenant_id: tenantId.toString() });
+    if (error) fail(fn, error);
+
+    const result = Object.fromEntries(allStatuses.map((s) => [s, 0]));
+    for (const row of (data ?? []) as { status: string; count: number }[]) {
+      result[row.status] = row.count;
+    }
+    return result;
+  }
+
+  /**
+   * Item MEDIO #9 de la auditoría: antes reutilizaba getDashboardKpis (6
+   * queries) para leer solo 2 de sus 6 campos — ahora consulta directo lo que
+   * necesita.
+   */
   async getConversationSummary(
     tenantId: Identity,
   ): Promise<{ total: number; activeSessions: number }> {
-    const kpis = await this.getDashboardKpis(tenantId);
-    return { total: kpis.conversationCount, activeSessions: kpis.activeSessionCount };
+    const tid = tenantId.toString();
+    const [total, activeSessions] = await Promise.all([
+      count(
+        () => this.db.from("conversations").select("*", { count: "exact", head: true }).eq("tenant_id", tid),
+        "conversations.count",
+      ),
+      count(
+        () =>
+          this.db
+            .from("sessions")
+            .select("*, conversations!inner(tenant_id)", { count: "exact", head: true })
+            .eq("status", "active")
+            .eq("conversations.tenant_id", tid),
+        "sessions.count",
+      ),
+    ]);
+    return { total, activeSessions };
   }
 }
