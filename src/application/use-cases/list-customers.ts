@@ -1,12 +1,12 @@
 import { Identity } from "@/domain";
 import { CustomerRepository, CustomerSearchFilters } from "../ports/crm-repositories";
 
-/** ListCustomers — SCR-003 §7 GET /customers (paginado + filtros). */
+/** ListCustomers — SCR-003 §7 GET /customers (paginado por cursor + filtros). */
 export interface ListCustomersInput {
   tenantId: string;
   query?: string;
   tags?: string[];
-  page?: number;
+  cursor?: string;
   limit?: number;
 }
 
@@ -19,22 +19,20 @@ export interface ListCustomersResult {
     tags: string[];
     archived: boolean;
   }[];
-  total: number;
-  page: number;
+  nextCursor: string | null;
 }
 
 export class ListCustomers {
   constructor(private readonly customers: CustomerRepository) {}
 
   async execute(input: ListCustomersInput): Promise<ListCustomersResult> {
-    const page = input.page && input.page > 0 ? input.page : 1;
     const limit = input.limit && input.limit > 0 ? input.limit : 20;
 
     const filters: CustomerSearchFilters = { query: input.query, tags: input.tags };
-    const { items, total } = await this.customers.search(
+    const { items, nextCursor } = await this.customers.search(
       Identity.of(input.tenantId),
       filters,
-      page,
+      input.cursor ?? null,
       limit,
     );
 
@@ -47,8 +45,7 @@ export class ListCustomers {
         tags: [...c.tags],
         archived: c.isArchived,
       })),
-      total,
-      page,
+      nextCursor,
     };
   }
 }

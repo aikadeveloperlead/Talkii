@@ -23,6 +23,23 @@ function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
 
+/** Fila de customers tal como la devuelve `search` — incluye `created_at`, que `CustomerRow` no expone (no es parte del dominio, solo del cursor de paginación). */
+type CustomerSearchRow = CustomerRow & { created_at: string };
+
+function encodeCustomerCursor(createdAt: string, id: string): string {
+  return Buffer.from(`${createdAt}|${id}`, "utf8").toString("base64url");
+}
+
+function decodeCustomerCursor(cursor: string): { createdAt: string; id: string } | null {
+  try {
+    const [createdAt, id] = Buffer.from(cursor, "base64url").toString("utf8").split("|");
+    if (!createdAt || !id) return null;
+    return { createdAt, id };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Quita los caracteres con significado estructural en el mini-lenguaje de
  * filtros de PostgREST (`,` separa condiciones, `(`/`)` las agrupa) de un
@@ -64,15 +81,22 @@ export class SupabaseCustomerRepository implements CustomerRepository {
     return data ? rowToCustomer(data as CustomerRow) : null;
   }
 
+  /**
+   * Paginación por cursor (item MEDIO #12 de la auditoría — reemplaza
+   * page/OFFSET). El cursor codifica `(created_at, id)` de la última fila de
+   * la página anterior; keyset predicate (`<` sobre esa tupla, mismo orden
+   * `created_at desc, id desc`) evita el re-escaneo de OFFSET. `pg_trgm`
+   * (migración 0024) acelera el ILIKE de abajo.
+   */
   async search(
     tenantId: Identity,
     filters: CustomerSearchFilters,
-    page: number,
+    cursor: string | null | undefined,
     limit: number,
   ): Promise<CustomerSearchResult> {
     let query = this.db
       .from("customers")
-      .select("*", { count: "exact" })
+      .select("*")
       .eq("tenant_id", tenantId.toString());
 
     if (!filters.includeArchived) query = query.is("archived_at", null);
@@ -85,16 +109,30 @@ export class SupabaseCustomerRepository implements CustomerRepository {
     if (filters.tags?.length) {
       query = query.contains("tags", filters.tags);
     }
+    if (cursor) {
+      const decoded = decodeCustomerCursor(cursor);
+      if (decoded) {
+        query = query.or(
+          `created_at.lt.${decoded.createdAt},and(created_at.eq.${decoded.createdAt},id.lt.${decoded.id})`,
+        );
+      }
+    }
 
-    const start = (page - 1) * limit;
-    const { data, error, count } = await query
+    // Pide 1 fila de más para saber si hay siguiente página sin un COUNT aparte.
+    const { data, error } = await query
       .order("created_at", { ascending: false })
-      .range(start, start + limit - 1);
+      .order("id", { ascending: false })
+      .limit(limit + 1);
     if (error) fail("customers.select", error);
 
+    const rows = data as CustomerSearchRow[];
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
+
     return {
-      items: (data as CustomerRow[]).map(rowToCustomer),
-      total: count ?? 0,
+      items: page.map(rowToCustomer),
+      nextCursor: hasMore && last ? encodeCustomerCursor(last.created_at, last.id) : null,
     };
   }
 }

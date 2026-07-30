@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       tenantId: scope.tenantId,
       query: params.get("search") ?? undefined,
       tags: params.get("tags")?.split(",").filter(Boolean),
-      page: Number(params.get("page")) || undefined,
+      cursor: params.get("cursor") ?? undefined,
       limit: Number(params.get("limit")) || undefined,
     });
     return NextResponse.json(result);

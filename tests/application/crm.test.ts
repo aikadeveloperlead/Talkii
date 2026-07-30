@@ -135,7 +135,22 @@ describe("ListCustomers", () => {
     const result = await listCustomers.execute({ tenantId, query: "nic" });
     expect(result.items).toHaveLength(1);
     expect(result.items[0].fullName).toBe("Nicolás");
-    expect(result.total).toBe(1);
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it("pagina por cursor (item MEDIO #12): la segunda página continúa donde terminó la primera", async () => {
+    const { createCustomer, listCustomers } = setup();
+    await createCustomer.execute({ tenantId, firstName: "Uno", phone: "1" });
+    await createCustomer.execute({ tenantId, firstName: "Dos", phone: "2" });
+    await createCustomer.execute({ tenantId, firstName: "Tres", phone: "3" });
+
+    const first = await listCustomers.execute({ tenantId, limit: 2 });
+    expect(first.items.map((c) => c.fullName)).toEqual(["Tres", "Dos"]);
+    expect(first.nextCursor).not.toBeNull();
+
+    const second = await listCustomers.execute({ tenantId, limit: 2, cursor: first.nextCursor! });
+    expect(second.items.map((c) => c.fullName)).toEqual(["Uno"]);
+    expect(second.nextCursor).toBeNull();
   });
 });
 

@@ -13,7 +13,8 @@ export interface CustomerSearchFilters {
 
 export interface CustomerSearchResult {
   items: Customer[];
-  total: number;
+  /** Opaco: pasar de vuelta tal cual para pedir la siguiente página. `null` = no hay más. */
+  nextCursor: string | null;
 }
 
 export interface CustomerRepository {
@@ -21,10 +22,15 @@ export interface CustomerRepository {
   findById(id: Identity): Promise<Customer | null>;
   /** Para validar unicidad de teléfono por tenant (SCR-003 §7 Validaciones). */
   findByPhone(tenantId: Identity, phone: string): Promise<Customer | null>;
+  /**
+   * Paginación por cursor (item MEDIO #12 de la auditoría — reemplaza
+   * page/OFFSET, que se degrada con el tamaño de la tabla). `cursor` es el
+   * `nextCursor` de la página anterior, o `null`/`undefined` para la primera.
+   */
   search(
     tenantId: Identity,
     filters: CustomerSearchFilters,
-    page: number,
+    cursor: string | null | undefined,
     limit: number,
   ): Promise<CustomerSearchResult>;
 }

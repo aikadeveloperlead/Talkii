@@ -322,10 +322,13 @@ export class InMemoryCustomers implements CustomerRepository {
   async search(
     tenantId: Identity,
     filters: CustomerSearchFilters,
-    page: number,
+    cursor: string | null | undefined,
     limit: number,
   ): Promise<CustomerSearchResult> {
-    let items = [...this.repo.store.values()].filter((c) => c.tenantId.equals(tenantId));
+    // Orden más-reciente-primero: el Map conserva orden de inserción, se
+    // invierte para simular `created_at desc` sin que el dominio cargue esa
+    // fecha (la paginación por cursor es un detalle de infra, no de dominio).
+    let items = [...this.repo.store.values()].reverse().filter((c) => c.tenantId.equals(tenantId));
     if (!filters.includeArchived) items = items.filter((c) => !c.isArchived);
     if (filters.query) {
       const q = filters.query.toLowerCase();
@@ -339,9 +342,16 @@ export class InMemoryCustomers implements CustomerRepository {
     if (filters.tags?.length) {
       items = items.filter((c) => filters.tags!.every((t) => c.tags.includes(t)));
     }
-    const total = items.length;
-    const start = (page - 1) * limit;
-    return { items: items.slice(start, start + limit), total };
+
+    let start = 0;
+    if (cursor) {
+      const idx = items.findIndex((c) => c.id.toString() === cursor);
+      start = idx >= 0 ? idx + 1 : 0;
+    }
+    const page = items.slice(start, start + limit);
+    const hasMore = start + limit < items.length;
+    const nextCursor = hasMore ? (page[page.length - 1]?.id.toString() ?? null) : null;
+    return { items: page, nextCursor };
   }
 }
 
