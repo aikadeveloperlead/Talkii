@@ -67,7 +67,7 @@ export class HandleInboundMessage {
     );
     if (!binding) return { status: "unbound" };
 
-    const sessionId = await this.resolveActiveSession(binding.tenantId, input);
+    const sessionId = await this.resolveActiveSession(binding.tenantId.toString(), input);
 
     let eventId: string;
     try {
@@ -100,8 +100,8 @@ export class HandleInboundMessage {
 
     const { decisionId } = await this.makeDecision.execute({
       eventId,
-      agentId: binding.agentId,
-      funnelId: binding.funnelId,
+      agentId: binding.agentId.toString(),
+      funnelId: binding.funnelId?.toString(),
     });
 
     await this.executeDecision.execute({

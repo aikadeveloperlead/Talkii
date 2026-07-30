@@ -24,6 +24,7 @@ describe("SupabaseChannelBindingResolver — descifra access_token (item MEDIO: 
     const cipherText = encryptToken("EAAG-token-real", "clave-de-test");
     const resolver = new SupabaseChannelBindingResolver(
       fakeDb({
+        id: "cb1",
         tenant_id: "t1",
         channel: "whatsapp",
         external_id: "phone-1",
@@ -42,6 +43,7 @@ describe("SupabaseChannelBindingResolver — descifra access_token (item MEDIO: 
     delete process.env.ENCRYPTION_KEY;
     const resolver = new SupabaseChannelBindingResolver(
       fakeDb({
+        id: "cb1",
         tenant_id: "t1",
         channel: "whatsapp",
         external_id: "phone-1",
@@ -60,6 +62,7 @@ describe("SupabaseChannelBindingResolver — descifra access_token (item MEDIO: 
     delete process.env.ENCRYPTION_KEY;
     const resolver = new SupabaseChannelBindingResolver(
       fakeDb({
+        id: "cb1",
         tenant_id: "t1",
         channel: "whatsapp",
         external_id: "phone-1",

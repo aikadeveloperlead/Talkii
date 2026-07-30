@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { Conversation, Decision, Event, Identity, Session } from "@/domain";
+import { ChannelBinding, Conversation, Decision, Event, Identity, Session } from "@/domain";
 import {
   ExecuteDecision,
   GetConversationDetail,
@@ -9,7 +9,6 @@ import {
   SetOperatorControl,
 } from "@/application/use-cases";
 import { DomainError } from "@/domain";
-import type { ChannelBinding } from "@/application/ports";
 import {
   FakeMessageSender,
   FixedClock,
@@ -22,12 +21,12 @@ import {
 } from "../fakes";
 
 const tenantId = "11111111-1111-1111-1111-111111111111";
-const binding: ChannelBinding = {
-  tenantId,
+const binding: ChannelBinding = ChannelBinding.create(Identity.of("cb1"), {
+  tenantId: Identity.of(tenantId),
   channel: "whatsapp",
   externalId: "phone-123",
-  agentId: "a1",
-};
+  agentId: Identity.of("a1"),
+});
 
 function setup() {
   const ids = new SequentialIds();

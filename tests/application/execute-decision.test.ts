@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { Decision, Identity } from "@/domain";
+import { ChannelBinding, Decision, Identity } from "@/domain";
 import { ExecuteDecision } from "@/application/use-cases";
-import type { ChannelBinding } from "@/application/ports";
 import {
   FakeMessageSender,
   FixedClock,
@@ -10,12 +9,12 @@ import {
   SequentialIds,
 } from "../fakes";
 
-const binding: ChannelBinding = {
-  tenantId: "t1",
+const binding: ChannelBinding = ChannelBinding.create(Identity.of("cb1"), {
+  tenantId: Identity.of("t1"),
   channel: "whatsapp",
   externalId: "123456",
-  agentId: "a1",
-};
+  agentId: Identity.of("a1"),
+});
 
 function setup() {
   const decisions = new InMemoryDecisions();

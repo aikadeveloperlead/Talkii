@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { Agent, Conversation, Decision, DomainError, Identity, Session } from "@/domain";
+import {
+  Agent,
+  ChannelBinding,
+  Conversation,
+  Decision,
+  DomainError,
+  Identity,
+  Session,
+} from "@/domain";
 import {
   ExecuteDecision,
   HandleInboundMessage,
@@ -8,7 +16,6 @@ import {
   StartConversation,
 } from "@/application/use-cases";
 import type {
-  ChannelBinding,
   ExecutionContext,
   IDecisionEngine,
   IdGenerator,
@@ -73,12 +80,12 @@ class SendReplyEngine implements IDecisionEngine {
   }
 }
 
-const binding: ChannelBinding = {
-  tenantId: "11111111-1111-1111-1111-111111111111",
+const binding: ChannelBinding = ChannelBinding.create(Identity.of("cb1"), {
+  tenantId: Identity.of("11111111-1111-1111-1111-111111111111"),
   channel: "whatsapp",
   externalId: "phone-123",
-  agentId: "a1",
-};
+  agentId: Identity.of("a1"),
+});
 
 function setup() {
   const ids = new SequentialIds();
@@ -119,7 +126,7 @@ function setup() {
 async function seedAgent(agents: InMemoryAgents) {
   await agents.save(
     Agent.create(Identity.of("a1"), {
-      tenantId: Identity.of(binding.tenantId),
+      tenantId: binding.tenantId,
       name: "Vendedor",
       objective: "vender",
       permanentPrompt: "sé amable",
@@ -148,7 +155,7 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
 
     expect(result.status).toBe("processed");
     const conv = await conversations.findByParticipant(
-      Identity.of(binding.tenantId),
+      binding.tenantId,
       "whatsapp",
       "573001112233",
     );
@@ -166,7 +173,7 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
 
     // Sigue habiendo UNA conversación para ese handle.
     const conv = await conversations.findByParticipant(
-      Identity.of(binding.tenantId),
+      binding.tenantId,
       "whatsapp",
       "573001112233",
     );
@@ -202,7 +209,7 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
     await useCase.execute(inbound);
 
     const conv = await conversations.findByParticipant(
-      Identity.of(binding.tenantId),
+      binding.tenantId,
       "whatsapp",
       "573001112233",
     );
@@ -234,7 +241,7 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
     // Conversation existente con una Session activa cuya última actividad
     // fue hace mucho más que el timeout configurado.
     const conversation = Conversation.create(Identity.of("conv-1"), {
-      tenantId: Identity.of(binding.tenantId),
+      tenantId: binding.tenantId,
       channel: "whatsapp",
       participants: [{ channelHandle: "573001112233", displayName: "Nicolás" }],
     });
@@ -302,7 +309,7 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
     // mensaje entrante entra por la rama que reabre Session (la que puede
     // perder la carrera).
     const conv = await new StartConversation(ids, clock, conversations, realSessions).execute({
-      tenantId: binding.tenantId,
+      tenantId: binding.tenantId.toString(),
       channel: "whatsapp",
       participant: { channelHandle: "573001112233", displayName: "Nicolás" },
     });

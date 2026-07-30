@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   Agent,
   Appointment,
+  ChannelBinding,
   Conversation,
   Customer,
   CustomerTimelineEntry,
@@ -325,5 +326,45 @@ describe("Preferences (SCR-012 §5.5)", () => {
     expect(() =>
       Preferences.create(id("p1"), { tenantId: id("t1"), dateFormat: "" }),
     ).toThrow(DomainError);
+  });
+});
+
+describe("ChannelBinding (SCR-002 Channel:WhatsApp, item MEDIO #2)", () => {
+  it("rechaza externalId vacío", () => {
+    expect(() =>
+      ChannelBinding.create(id("cb1"), {
+        tenantId: id("t1"),
+        channel: "whatsapp",
+        externalId: "  ",
+        agentId: id("a1"),
+      }),
+    ).toThrow(DomainError);
+  });
+
+  it("conserva identidad y campos opcionales", () => {
+    const binding = ChannelBinding.create(id("cb1"), {
+      tenantId: id("t1"),
+      channel: "whatsapp",
+      externalId: " 123456 ",
+      agentId: id("a1"),
+      funnelId: id("f1"),
+      accessToken: "token-secreto",
+    });
+    expect(binding.externalId).toBe("123456");
+    expect(binding.tenantId.equals(id("t1"))).toBe(true);
+    expect(binding.agentId.equals(id("a1"))).toBe(true);
+    expect(binding.funnelId?.equals(id("f1"))).toBe(true);
+    expect(binding.accessToken).toBe("token-secreto");
+  });
+
+  it("funnelId y accessToken son opcionales", () => {
+    const binding = ChannelBinding.create(id("cb1"), {
+      tenantId: id("t1"),
+      channel: "whatsapp",
+      externalId: "123456",
+      agentId: id("a1"),
+    });
+    expect(binding.funnelId).toBeUndefined();
+    expect(binding.accessToken).toBeUndefined();
   });
 });

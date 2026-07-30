@@ -57,8 +57,11 @@ Núcleo estable de 7 entidades. No se agrega ninguna sin ADR.
 **ChannelBinding** no es una entidad del núcleo: es un **recurso de
 configuración del Tenant** (capacidad, como Knowledge/Tool) que vincula la
 identidad de un canal externo (p. ej. `phone_number_id` de Meta) con el
-Tenant/Agent que lo atiende. Vive como puerto en `application/ports` y tabla
-`channel_bindings` en persistencia.
+Tenant/Agent que lo atiende. Es una entidad de dominio propia
+(`domain/administration/channel-binding.ts`, item MEDIO #2 de la auditoría)
+con invariantes propios; `application/ports/channel-binding.ts` solo define
+el puerto `ChannelBindingResolver` y re-exporta el tipo. Persistencia: tabla
+`channel_bindings`.
 
 ## Bounded contexts (SSOT) → carpetas de dominio
 
@@ -76,7 +79,7 @@ más amplio. Mapeo real (item BAJO #17 de la auditoría):
 | Execution Runtime | `execution` | Session, Event, Decision |
 | Knowledge | `knowledge` | Category, KnowledgeDocument |
 | CRM | `crm` | Customer, Lead, CustomerTimelineEntry |
-| Channel:WhatsApp | *(sin carpeta de dominio)* | Adaptador en `infrastructure/whatsapp`; `ChannelBinding` vive como puerto (ver tabla de entidades arriba), no como carpeta de dominio propia. |
+| Channel:WhatsApp | `administration` | Adaptador en `infrastructure/whatsapp`; `ChannelBinding` es entidad de dominio (item MEDIO #2) — vive en `administration` por ser capacidad/configuración del Tenant, igual que Company/Preferences. |
 | Marketing | `templates` | WhatsAppTemplate — capability de Marketing, no bounded context con entidad núcleo propia. |
 | Scheduling | `scheduling` | Calendar, Appointment, AppointmentTimelineEntry |
 | Automation | `webhooks` | Webhook, WebhookDelivery |

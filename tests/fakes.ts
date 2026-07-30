@@ -235,9 +235,10 @@ export class InMemoryChannelBindings implements ChannelBindingResolver {
     tenantId: string,
     channel: Channel,
   ): Promise<ChannelBinding | null> {
+    const target = Identity.of(tenantId);
     return (
       this.bindings.find(
-        (b) => b.tenantId === tenantId && b.channel === channel,
+        (b) => b.tenantId.equals(target) && b.channel === channel,
       ) ?? null
     );
   }

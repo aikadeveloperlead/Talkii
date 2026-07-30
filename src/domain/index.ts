@@ -10,6 +10,8 @@ export { Company } from "./administration/company";
 export type { CompanyProps } from "./administration/company";
 export { Preferences } from "./administration/preferences";
 export type { PreferencesProps } from "./administration/preferences";
+export { ChannelBinding } from "./administration/channel-binding";
+export type { ChannelBindingProps } from "./administration/channel-binding";
 
 export { Agent } from "./agent-strategy/agent";
 export type {

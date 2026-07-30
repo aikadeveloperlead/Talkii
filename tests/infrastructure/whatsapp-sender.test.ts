@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { WhatsAppMessageSender } from "@/infrastructure/whatsapp/whatsapp-message-sender";
-import type { ChannelBinding } from "@/application/ports";
+import { ChannelBinding, Identity } from "@/domain";
 
-const binding: ChannelBinding = {
-  tenantId: "t1",
-  channel: "whatsapp",
-  externalId: "phone-123",
-  agentId: "a1",
-};
+function makeBinding(accessToken?: string): ChannelBinding {
+  return ChannelBinding.create(Identity.of("cb1"), {
+    tenantId: Identity.of("t1"),
+    channel: "whatsapp",
+    externalId: "phone-123",
+    agentId: Identity.of("a1"),
+    accessToken,
+  });
+}
+
+const binding: ChannelBinding = makeBinding();
 
 interface CapturedCall {
   url: string;
@@ -68,7 +73,7 @@ describe("WhatsAppMessageSender (Graph API)", () => {
     const sender = new WhatsAppMessageSender({ accessToken: "token-global", fetchFn });
 
     await sender.send({
-      binding: { ...binding, accessToken: "token-del-binding" },
+      binding: makeBinding("token-del-binding"),
       to: "57300",
       text: "hola",
     });

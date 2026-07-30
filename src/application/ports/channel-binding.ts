@@ -1,23 +1,14 @@
-import type { Channel } from "@/domain";
+import type { Channel, ChannelBinding } from "@/domain";
+
+export type { ChannelBinding };
 
 /**
- * ChannelBinding — recurso de configuración del Tenant (capacidad, NO entidad
- * del núcleo: el SSOT Cap. 7 cierra las 7 entidades). Vincula la identidad de
- * un canal externo (p. ej. el phone_number_id de Meta) con el Tenant que lo
- * posee y el Agent que lo atiende.
+ * Puerto: resuelve qué Tenant/Agent atiende una identidad de canal.
+ *
+ * `ChannelBinding` es la entidad de dominio (`domain/administration/channel-binding.ts`,
+ * item MEDIO #2 de la auditoría) — este módulo solo re-exporta el tipo para no
+ * romper los imports existentes de `@/application/ports`.
  */
-export interface ChannelBinding {
-  readonly tenantId: string;
-  readonly channel: Channel;
-  /** Identidad del canal en el proveedor (WhatsApp: phone_number_id). */
-  readonly externalId: string;
-  readonly agentId: string;
-  readonly funnelId?: string;
-  /** Credencial propia del binding; si falta, se usa la global de plataforma. */
-  readonly accessToken?: string;
-}
-
-/** Puerto: resuelve qué Tenant/Agent atiende una identidad de canal. */
 export interface ChannelBindingResolver {
   findByChannelIdentity(
     channel: Channel,

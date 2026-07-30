@@ -1,13 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Channel } from "@/domain";
-import type {
-  ChannelBinding,
-  ChannelBindingResolver,
-} from "@/application/ports";
+import { ChannelBinding, Identity, type Channel } from "@/domain";
+import type { ChannelBindingResolver } from "@/application/ports";
 import { decryptToken } from "../security/token-cipher";
 
 /** Fila de public.channel_bindings (migración 0002). `access_token` guarda el texto cifrado (token-cipher.ts, hallazgo MEDIO de auditoría). */
 interface ChannelBindingRow {
+  id: string;
   tenant_id: string;
   channel: Channel;
   external_id: string;
@@ -27,14 +25,14 @@ function rowToBinding(row: ChannelBindingRow): ChannelBinding {
     }
     accessToken = decryptToken(row.access_token, key);
   }
-  return {
-    tenantId: row.tenant_id,
+  return ChannelBinding.create(Identity.of(row.id), {
+    tenantId: Identity.of(row.tenant_id),
     channel: row.channel,
     externalId: row.external_id,
-    agentId: row.agent_id,
-    funnelId: row.funnel_id ?? undefined,
+    agentId: Identity.of(row.agent_id),
+    funnelId: row.funnel_id ? Identity.of(row.funnel_id) : undefined,
     accessToken,
-  };
+  });
 }
 
 export class SupabaseChannelBindingResolver implements ChannelBindingResolver {
