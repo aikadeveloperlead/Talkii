@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Appointment, AppointmentTimelineEntry, Calendar, Identity } from "@/domain";
+import { Appointment, AppointmentTimelineEntry, Calendar, DomainError, Identity } from "@/domain";
 import type {
   AppointmentRepository,
   AppointmentSearchFilters,
@@ -56,7 +56,17 @@ export class SupabaseAppointmentRepository implements AppointmentRepository {
 
   async save(appointment: Appointment): Promise<void> {
     const { error } = await this.db.from("appointments").upsert(appointmentToRow(appointment));
-    if (error) fail("appointments.upsert", error);
+    if (error) {
+      // Postgres 23P01 (exclusion_violation): choca con appointments_no_overlap
+      // (0013_appointments_no_overlap.sql) — cierra la ventana de carrera del
+      // check-then-insert de findOverlapping (item 10 de auditoría).
+      if ((error as { code?: string }).code === "23P01") {
+        throw new DomainError(
+          "Appointment: se solapa con otra cita existente en el mismo Calendar",
+        );
+      }
+      fail("appointments.upsert", error);
+    }
   }
 
   async findById(id: Identity): Promise<Appointment | null> {
