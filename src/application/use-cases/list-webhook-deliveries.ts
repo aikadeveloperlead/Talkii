@@ -14,6 +14,7 @@ export class ListWebhookDeliveries {
         status: d.status,
         responseStatus: d.responseStatus,
         responseTimeMs: d.responseTimeMs,
+        errorDetail: d.errorDetail,
         occurredAt: d.occurredAt,
       }))
       .sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());

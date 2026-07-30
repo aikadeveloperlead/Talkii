@@ -45,6 +45,7 @@ export interface WebhookDeliveryRow {
   status: WebhookDeliveryStatus;
   response_status: number | null;
   response_time_ms: number | null;
+  error_detail: string | null;
   occurred_at: string;
 }
 export function deliveryToRow(delivery: WebhookDelivery): WebhookDeliveryRow {
@@ -56,6 +57,7 @@ export function deliveryToRow(delivery: WebhookDelivery): WebhookDeliveryRow {
     status: delivery.status,
     response_status: delivery.responseStatus ?? null,
     response_time_ms: delivery.responseTimeMs ?? null,
+    error_detail: delivery.errorDetail ?? null,
     occurred_at: delivery.occurredAt.toISOString(),
   };
 }
@@ -67,6 +69,7 @@ export function rowToDelivery(row: WebhookDeliveryRow): WebhookDelivery {
     status: row.status,
     responseStatus: row.response_status ?? undefined,
     responseTimeMs: row.response_time_ms ?? undefined,
+    errorDetail: row.error_detail ?? undefined,
     occurredAt: new Date(row.occurred_at),
   });
 }

@@ -180,5 +180,7 @@ describe("DispatchWebhookEvent (SCR-011 §4.4, BK-04/BK-05)", () => {
     const listDeliveries = new ListWebhookDeliveries(deliveries);
     const result = await listDeliveries.execute(webhookId);
     expect(result[0].status).toBe("failed");
+    // Hallazgo ALTO de auditoría (catch{} vacío descartaba el motivo real del fallo).
+    expect(result[0].errorDetail).toBe("network error");
   });
 });

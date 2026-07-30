@@ -50,13 +50,14 @@ export class DispatchWebhookEvent {
           }),
         );
         dispatched += 1;
-      } catch {
+      } catch (error) {
         await this.deliveries.save(
           WebhookDelivery.create(this.ids.next(), {
             webhookId: webhook.id,
             eventName,
             payload,
             status: "failed",
+            errorDetail: error instanceof Error ? error.message : String(error),
             occurredAt: this.clock.now(),
           }),
         );

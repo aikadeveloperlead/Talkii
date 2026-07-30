@@ -10,6 +10,8 @@ export interface WebhookDeliveryProps {
   status: WebhookDeliveryStatus;
   responseStatus?: number;
   responseTimeMs?: number;
+  /** Motivo real del fallo (hallazgo ALTO de auditoría: antes se descartaba en un catch{} vacío). */
+  errorDetail?: string;
   occurredAt: Date;
 }
 
@@ -43,6 +45,9 @@ export class WebhookDelivery extends Entity {
   }
   get responseTimeMs(): number | undefined {
     return this.props.responseTimeMs;
+  }
+  get errorDetail(): string | undefined {
+    return this.props.errorDetail;
   }
   get occurredAt(): Date {
     return this.props.occurredAt;
