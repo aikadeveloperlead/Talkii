@@ -13,14 +13,13 @@ export async function GET(): Promise<Response> {
     // Consulta mínima sujeta a RLS: comprueba conectividad sin filtrar datos.
     const { error } = await db.from("tenants").select("id").limit(1);
     if (error) {
-      return Response.json(
-        { status: "degraded", db: "error", detail: error.message },
-        { status: 503 },
-      );
+      console.error(JSON.stringify({ scope: "api.health", error: error.message }));
+      return Response.json({ status: "degraded", db: "error" }, { status: 503 });
     }
     return Response.json({ status: "ok", db: "reachable" });
   } catch (err) {
-    const detail = err instanceof Error ? err.message : "unknown";
-    return Response.json({ status: "error", detail }, { status: 500 });
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(JSON.stringify({ scope: "api.health", error: detail }));
+    return Response.json({ status: "error" }, { status: 500 });
   }
 }
