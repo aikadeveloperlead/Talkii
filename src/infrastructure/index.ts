@@ -62,6 +62,7 @@ export {
 } from "./whatsapp/whatsapp-message-sender";
 export { SupabaseChannelBindingResolver } from "./supabase/channel-binding-resolver";
 export { SupabaseAuthGateway } from "./supabase/auth-gateway";
+export { SupabaseRateLimiter } from "./supabase/rate-limiter";
 export { verifyWebhookSignature } from "./whatsapp/verify-signature";
 export {
   parseWebhookPayload,

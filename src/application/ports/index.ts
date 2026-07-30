@@ -59,3 +59,4 @@ export type {
   CompanyRepository,
   PreferencesRepository,
 } from "./administration-repositories";
+export type { RateLimiter, RateLimitResult } from "./rate-limiter";

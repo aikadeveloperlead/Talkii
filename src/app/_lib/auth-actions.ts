@@ -4,11 +4,26 @@
 import { redirect } from "next/navigation";
 import { createServiceClient } from "@/infrastructure";
 import { createContainer } from "./container";
+import { checkRateLimit } from "./rate-limit";
 import { createServerSupabase } from "./supabase-server";
+
+/** item MEDIO #13: intentos de login por email, ventana de 5 minutos. */
+const LOGIN_RATE_LIMIT = { limit: 5, windowSeconds: 5 * 60 };
+/** item MEDIO #13: altas por email, ventana de 1 hora (anti-spam de signup). */
+const SIGNUP_RATE_LIMIT = { limit: 3, windowSeconds: 60 * 60 };
 
 export async function signInWithPassword(formData: FormData): Promise<void> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+
+  const allowed = await checkRateLimit(
+    `login:${email.toLowerCase()}`,
+    LOGIN_RATE_LIMIT.limit,
+    LOGIN_RATE_LIMIT.windowSeconds,
+  );
+  if (!allowed) {
+    redirect("/login?error=rate-limited");
+  }
 
   const db = await createServerSupabase();
   const { error } = await db.auth.signInWithPassword({ email, password });
@@ -21,6 +36,15 @@ export async function signInWithPassword(formData: FormData): Promise<void> {
 export async function signUpWithPassword(formData: FormData): Promise<void> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+
+  const allowed = await checkRateLimit(
+    `signup:${email.toLowerCase()}`,
+    SIGNUP_RATE_LIMIT.limit,
+    SIGNUP_RATE_LIMIT.windowSeconds,
+  );
+  if (!allowed) {
+    redirect("/register?error=rate-limited");
+  }
 
   // La creación de la identidad pasa por el caso de uso RegisterUser (puerto
   // AuthGateway): la presentación no conoce `auth.admin.createUser`, solo que
