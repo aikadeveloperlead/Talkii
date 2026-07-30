@@ -1,8 +1,7 @@
 import { DomainError, Event, Identity } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
-import type { ChannelBinding } from "../ports/channel-binding";
-import type { MessageSender } from "../ports/message-sender";
+import type { MessageSender, OutboundChannelTarget } from "../ports/message-sender";
 import { DecisionRepository, EventRepository } from "../ports/repositories";
 
 /**
@@ -16,7 +15,12 @@ import { DecisionRepository, EventRepository } from "../ports/repositories";
  */
 export interface ExecuteDecisionInput {
   decisionId: string;
-  binding: ChannelBinding;
+  /**
+   * Item MEDIO #5 de la auditoría: antes era el `ChannelBinding` completo
+   * (tenantId/agentId/funnelId incluidos) solo para reenviarlo al
+   * MessageSender, que únicamente usa externalId/accessToken.
+   */
+  binding: OutboundChannelTarget;
   /** Handle del destinatario en el canal (WhatsApp: wa_id del cliente). */
   to: string;
 }

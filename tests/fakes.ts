@@ -61,6 +61,7 @@ import type {
   WebhookDeliveryRepository,
   WebhookDeliveryResult,
   WebhookRepository,
+  WebhookSendTarget,
   WebhookSender,
 } from "@/application/ports";
 
@@ -535,14 +536,14 @@ export class InMemoryWebhookDeliveries implements WebhookDeliveryRepository {
 
 /** Sender falso: registra los envíos y devuelve un resultado configurable. */
 export class FakeWebhookSender implements WebhookSender {
-  sent: { webhook: Webhook; eventName: string; payload: Record<string, unknown> }[] = [];
+  sent: { target: WebhookSendTarget; eventName: string; payload: Record<string, unknown> }[] = [];
   constructor(private readonly result: WebhookDeliveryResult = { status: 200, durationMs: 10 }) {}
   async send(
-    webhook: Webhook,
+    target: WebhookSendTarget,
     eventName: string,
     payload: Record<string, unknown>,
   ): Promise<WebhookDeliveryResult> {
-    this.sent.push({ webhook, eventName, payload });
+    this.sent.push({ target, eventName, payload });
     return this.result;
   }
 }

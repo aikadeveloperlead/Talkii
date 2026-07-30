@@ -150,7 +150,7 @@ describe("DispatchWebhookEvent (SCR-011 §4.4, BK-04/BK-05)", () => {
 
     expect(result.dispatched).toBe(1); // solo el activo suscrito
     expect(sender.sent).toHaveLength(1);
-    expect(sender.sent[0].webhook.id.toString()).toBe(activeId);
+    expect(sender.sent[0].target.url).toBe("https://example.com/a");
 
     const deliveries = await listDeliveries.execute(activeId);
     expect(deliveries).toHaveLength(1);

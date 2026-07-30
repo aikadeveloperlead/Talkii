@@ -1,7 +1,11 @@
 import { createHmac } from "node:crypto";
 import { lookup } from "node:dns/promises";
-import { isPrivateOrMetadataAddress, type Webhook } from "@/domain";
-import type { WebhookDeliveryResult, WebhookSender } from "@/application/ports";
+import { isPrivateOrMetadataAddress } from "@/domain";
+import type {
+  WebhookDeliveryResult,
+  WebhookSender,
+  WebhookSendTarget,
+} from "@/application/ports";
 
 /**
  * HttpWebhookSender — SCR-011 §4.4 (Construir Payload → Firmar HMAC → HTTP
@@ -36,27 +40,27 @@ export class HttpWebhookSender implements WebhookSender {
   }
 
   async send(
-    webhook: Webhook,
+    target: WebhookSendTarget,
     eventName: string,
     payload: Record<string, unknown>,
   ): Promise<WebhookDeliveryResult> {
-    const target = new URL(webhook.url);
-    const addresses = await this.resolveHost(target.hostname);
+    const url = new URL(target.url);
+    const addresses = await this.resolveHost(url.hostname);
     if (addresses.some((a) => isPrivateOrMetadataAddress(a.address))) {
       throw new Error(
-        `HttpWebhookSender: ${target.hostname} resuelve a una red privada o al servicio de metadata — envío bloqueado (SSRF).`,
+        `HttpWebhookSender: ${url.hostname} resuelve a una red privada o al servicio de metadata — envío bloqueado (SSRF).`,
       );
     }
 
     const body = JSON.stringify({ event: eventName, data: payload });
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (webhook.secret) {
+    if (target.secret) {
       headers["X-Talkii-Signature-256"] =
-        `sha256=${createHmac("sha256", webhook.secret).update(body, "utf8").digest("hex")}`;
+        `sha256=${createHmac("sha256", target.secret).update(body, "utf8").digest("hex")}`;
     }
 
     const startedAt = Date.now();
-    const response = await this.fetchImpl(webhook.url, {
+    const response = await this.fetchImpl(target.url, {
       method: "POST",
       headers,
       body,

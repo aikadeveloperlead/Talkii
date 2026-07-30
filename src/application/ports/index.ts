@@ -27,6 +27,7 @@ export type { AuthGateway, CreatedUser } from "./auth-gateway";
 export type {
   MessageSender,
   OutboundMessage,
+  OutboundChannelTarget,
   MessageSendResult,
 } from "./message-sender";
 export type {
@@ -54,6 +55,7 @@ export type {
   WebhookDeliveryRepository,
   WebhookDeliveryResult,
   WebhookSender,
+  WebhookSendTarget,
 } from "./webhook-repositories";
 export type {
   CompanyRepository,

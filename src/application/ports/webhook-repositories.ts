@@ -1,5 +1,17 @@
 import { Identity, Webhook, WebhookDelivery } from "@/domain";
 
+/**
+ * Item MEDIO #5 de la auditoría: antes `WebhookSender.send` recibía el
+ * `Webhook` completo (incluido `secret`, un credential propio del Tenant)
+ * cuando el adaptador HTTP solo necesita `url`/`secret` para firmar y
+ * direccionar el envío. Un `Webhook` real satisface esta forma
+ * estructuralmente, así que los callers existentes no cambian.
+ */
+export interface WebhookSendTarget {
+  readonly url: string;
+  readonly secret?: string;
+}
+
 export interface WebhookRepository {
   save(webhook: Webhook): Promise<void>;
   findById(id: Identity): Promise<Webhook | null>;
@@ -20,5 +32,9 @@ export interface WebhookDeliveryResult {
 
 /** Puerto de envío HTTP saliente (SCR-011 §4.4: Construir Payload → Firmar → POST). */
 export interface WebhookSender {
-  send(webhook: Webhook, eventName: string, payload: Record<string, unknown>): Promise<WebhookDeliveryResult>;
+  send(
+    target: WebhookSendTarget,
+    eventName: string,
+    payload: Record<string, unknown>,
+  ): Promise<WebhookDeliveryResult>;
 }

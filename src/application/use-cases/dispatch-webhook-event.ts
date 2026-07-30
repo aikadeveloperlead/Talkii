@@ -42,7 +42,11 @@ export class DispatchWebhookEvent {
       // aquí para que la regla de negocio se sostenga aunque cambie la query.
       if (!webhook.isDeliverable) continue;
       try {
-        const result = await this.sender.send(webhook, eventName, payload);
+        const result = await this.sender.send(
+          { url: webhook.url, secret: webhook.secret },
+          eventName,
+          payload,
+        );
         await this.deliveries.save(
           WebhookDelivery.create(this.ids.next(), {
             webhookId: webhook.id,
