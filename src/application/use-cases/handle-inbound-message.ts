@@ -54,6 +54,8 @@ export class HandleInboundMessage {
     private readonly ingestEvent: IngestEvent,
     private readonly makeDecision: MakeDecision,
     private readonly executeDecision: ExecuteDecision,
+    /** Cierra la Session activa si su última actividad supera este umbral (item MEDIO de auditoría: SessionStatus="closed" nunca se producía). */
+    private readonly inactivityTimeoutMs: number,
   ) {}
 
   async execute(
@@ -135,9 +137,17 @@ export class HandleInboundMessage {
     }
 
     const active = await this.sessions.findActiveByConversation(conversation.id);
-    if (active) return active.id.toString();
+    if (active) {
+      const lastActivity = active.lastActivityAt;
+      const isStale =
+        lastActivity !== undefined &&
+        this.clock.now().getTime() - lastActivity.getTime() > this.inactivityTimeoutMs;
+      if (!isStale) return active.id.toString();
+      await this.sessions.save(active.close(this.clock.now()));
+    }
 
-    // La relación existe pero todas sus Sessions están cerradas: se abre una
+    // La relación existe pero todas sus Sessions están cerradas (o la activa
+    // quedó stale y se acaba de cerrar): se abre una
     // nueva unidad operativa sobre la misma Conversation (SSOT Cap. 7 §6: el
     // cierre de una Session no cierra la Conversation).
     const session = Session.open(this.ids.next(), conversation.id, this.clock.now());

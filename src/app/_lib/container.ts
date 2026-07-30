@@ -284,6 +284,7 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
       ingestEvent,
       makeDecision,
       executeDecision,
+      sessionInactivityTimeoutMs(),
     ),
     getConversationDetail: new GetConversationDetail(conversations, sessions),
     listConversationMessages: new ListConversationMessages(
@@ -394,6 +395,20 @@ export function selectReasoningProvider(): IReasoningProvider {
   const choice = (process.env.REASONING_PROVIDER ?? "openai").trim().toLowerCase();
   if (choice === "anthropic") return new AnthropicReasoningProvider();
   return new OpenAIReasoningProvider();
+}
+
+/**
+ * Umbral de inactividad para cerrar la Session activa de una Conversation
+ * (item MEDIO de auditoría: SessionStatus="closed" nunca se producía y las
+ * Sessions crecían sin límite). `SESSION_INACTIVITY_TIMEOUT_HOURS`, 24h por
+ * defecto — política simple decidida por el usuario, no requiere cron/scheduler
+ * (se evalúa de forma perezosa, al resolver la Session activa de la próxima
+ * request entrante, no en background).
+ */
+function sessionInactivityTimeoutMs(): number {
+  const hours = Number(process.env.SESSION_INACTIVITY_TIMEOUT_HOURS ?? "24");
+  const safeHours = Number.isFinite(hours) && hours > 0 ? hours : 24;
+  return safeHours * 60 * 60 * 1000;
 }
 
 /** Envuelve un IDecisionEngine cuya construcción se difiere al primer `decide`. */

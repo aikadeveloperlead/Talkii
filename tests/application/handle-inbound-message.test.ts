@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Agent, Decision, DomainError, Identity, Session } from "@/domain";
+import { Agent, Conversation, Decision, DomainError, Identity, Session } from "@/domain";
 import {
   ExecuteDecision,
   HandleInboundMessage,
@@ -110,6 +110,7 @@ function setup() {
       clock,
     ),
     new ExecuteDecision(ids, clock, decisions, events, sender),
+    24 * 60 * 60 * 1000, // 24h, mismo default que container.ts
   );
 
   return { agents, conversations, sessions, events, decisions, sender, useCase };
@@ -226,6 +227,65 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
     expect(sender.sent).toHaveLength(1); // solo la primera respuesta automática
   });
 
+  it("cierra la Session inactiva y abre una nueva si superó el timeout de inactividad (item MEDIO: SessionStatus=closed nunca se producía)", async () => {
+    const { agents, conversations, sessions, events, decisions, sender } = setup();
+    await seedAgent(agents);
+
+    // Conversation existente con una Session activa cuya última actividad
+    // fue hace mucho más que el timeout configurado.
+    const conversation = Conversation.create(Identity.of("conv-1"), {
+      tenantId: Identity.of(binding.tenantId),
+      channel: "whatsapp",
+      participants: [{ channelHandle: "573001112233", displayName: "Nicolás" }],
+    });
+    await conversations.save(conversation);
+    const staleSession = Session.create(Identity.of("stale-session"), {
+      conversationId: conversation.id,
+      dimensions: {
+        state: { status: "active" },
+        memory: {},
+        context: {},
+        timeline: [{ at: new Date("2026-01-01T00:00:00.000Z"), kind: "session.started" }],
+        variables: {},
+        metadata: {},
+      },
+    });
+    await sessions.save(staleSession);
+
+    const oneHourMs = 60 * 60 * 1000;
+    const useCase = new HandleInboundMessage(
+      new InMemoryChannelBindings([binding]),
+      conversations,
+      sessions,
+      new SequentialIds(),
+      new FixedClock(), // "ahora" muy posterior al 2026-01-01 de la Session stale
+      new StartConversation(new SequentialIds(), new FixedClock(), conversations, sessions),
+      new IngestEvent(new SequentialIds(), new FixedClock(), sessions, events),
+      new MakeDecision(
+        new SendReplyEngine(new SequentialIds()),
+        events,
+        sessions,
+        agents,
+        new InMemoryFunnels(),
+        decisions,
+        new SequentialIds(),
+        new FixedClock(),
+      ),
+      new ExecuteDecision(new SequentialIds(), new FixedClock(), decisions, events, sender),
+      oneHourMs,
+    );
+
+    const result = await useCase.execute(inbound);
+
+    expect(result.status).toBe("processed");
+    const stale = await sessions.findById(staleSession.id);
+    expect(stale?.isActive).toBe(false); // cerrada, no borrada
+
+    const active = await sessions.findActiveByConversation(conversation.id);
+    expect(active).not.toBeNull();
+    expect(active?.id.toString()).not.toBe("stale-session");
+  });
+
   it("no pierde el mensaje si pierde la carrera al reabrir Session (item 10, usa la Session de quien ganó)", async () => {
     const ids = new SequentialIds();
     const clock = new FixedClock();
@@ -284,6 +344,7 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
         clock,
       ),
       new ExecuteDecision(ids, clock, decisions, events, sender),
+      24 * 60 * 60 * 1000,
     );
 
     const result = await useCase.execute(inbound);

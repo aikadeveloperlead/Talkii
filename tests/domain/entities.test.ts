@@ -132,6 +132,29 @@ describe("Session (SSOT Cap.7 §7)", () => {
     const released = underControl.withOperatorControl(false);
     expect(released.operatorControl).toBe(false);
   });
+
+  it("close(at) transiciona a closed sin tocar el resto de las dimensiones (item MEDIO: SessionStatus=closed nunca se producía)", () => {
+    const session = Session.open(id("s1"), id("c1"), new Date("2026-01-01T00:00:00.000Z"));
+    const closedAt = new Date("2026-01-02T00:00:00.000Z");
+
+    const closed = session.close(closedAt);
+
+    expect(closed.isActive).toBe(false);
+    expect(closed.state.status).toBe("closed");
+    expect(closed.dimensions.memory).toEqual(session.dimensions.memory);
+  });
+
+  it("withTimelineEntry agrega una entrada y lastActivityAt refleja la más reciente", () => {
+    const startedAt = new Date("2026-01-01T00:00:00.000Z");
+    const session = Session.open(id("s1"), id("c1"), startedAt);
+    expect(session.lastActivityAt).toEqual(startedAt);
+
+    const laterAt = new Date("2026-01-01T05:00:00.000Z");
+    const touched = session.withTimelineEntry({ at: laterAt, kind: "message.received" });
+
+    expect(touched.dimensions.timeline).toHaveLength(2);
+    expect(touched.lastActivityAt).toEqual(laterAt);
+  });
 });
 
 describe("Decision (SSOT Cap.7 §9)", () => {

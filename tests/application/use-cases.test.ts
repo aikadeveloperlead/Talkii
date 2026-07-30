@@ -74,6 +74,28 @@ describe("Modelo de Ejecución end-to-end (SSOT Cap. 11)", () => {
     expect(stored?.sessionId.toString()).toBe(sessionId);
   });
 
+  it("IngestEvent bumpea el Timeline de la Session (item MEDIO: SessionStatus=closed nunca se producía porque nada trackeaba actividad)", async () => {
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+    const before = await sessions.findById(Identity.of(sessionId));
+    expect(before?.dimensions.timeline).toHaveLength(1); // solo "session.started"
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "hola" },
+    });
+
+    const after = await sessions.findById(Identity.of(sessionId));
+    expect(after?.dimensions.timeline).toHaveLength(2);
+    expect(after?.lastActivityAt).toEqual(clock.now());
+  });
+
   it("IngestEvent falla si la Session no existe", async () => {
     const ingest = new IngestEvent(ids, clock, sessions, events);
     await expect(

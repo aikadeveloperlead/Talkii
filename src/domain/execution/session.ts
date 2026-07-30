@@ -90,6 +90,12 @@ export class Session extends Entity {
     return this.props.dimensions.state.status === "active";
   }
 
+  /** Instante del hecho más reciente del Timeline, o undefined si aún no hay ninguno. */
+  get lastActivityAt(): Date | undefined {
+    const timeline = this.props.dimensions.timeline;
+    return timeline.length ? timeline[timeline.length - 1].at : undefined;
+  }
+
   /** Bandera operativa (SCR-002 Estado 8): true mientras un operador humano tiene el control. */
   get operatorControl(): boolean {
     return this.props.dimensions.metadata.operatorControl === true;
@@ -103,5 +109,27 @@ export class Session extends Entity {
         metadata: { ...this.props.dimensions.metadata, operatorControl: enabled },
       },
     });
+  }
+
+  /** Agrega un hecho al Timeline (dimensión cronológica) sin tocar el resto. */
+  withTimelineEntry(entry: { at: Date; kind: string }): Session {
+    return Session.create(this.id, {
+      ...this.props,
+      dimensions: {
+        ...this.props.dimensions,
+        timeline: [...this.props.dimensions.timeline, entry],
+      },
+    });
+  }
+
+  /** Cierra la Session (item MEDIO de auditoría: SessionStatus="closed" nunca se producía). */
+  close(at: Date): Session {
+    return Session.create(this.id, {
+      ...this.props,
+      dimensions: {
+        ...this.props.dimensions,
+        state: { ...this.props.dimensions.state, status: "closed" },
+      },
+    }).withTimelineEntry({ at, kind: "session.closed" });
   }
 }

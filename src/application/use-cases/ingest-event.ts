@@ -53,6 +53,12 @@ export class IngestEvent {
 
     await this.events.append(event);
 
+    // Bumpea el Timeline (item MEDIO de auditoría: SessionStatus="closed"
+    // nunca se producía porque nada trackeaba la última actividad real).
+    await this.sessions.save(
+      session.withTimelineEntry({ at: event.occurredAt, kind: input.type }),
+    );
+
     return { eventId: event.id.toString() };
   }
 }
