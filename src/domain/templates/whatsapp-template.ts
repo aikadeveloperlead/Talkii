@@ -109,7 +109,7 @@ export class WhatsAppTemplate extends Entity {
     return WhatsAppTemplate.create(this.id, { ...this.props, ...changes });
   }
 
-  archived(): WhatsAppTemplate {
-    return WhatsAppTemplate.create(this.id, { ...this.props, archivedAt: new Date() });
+  archived(archivedAt: Date): WhatsAppTemplate {
+    return WhatsAppTemplate.create(this.id, { ...this.props, archivedAt });
   }
 }

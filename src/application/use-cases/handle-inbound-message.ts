@@ -92,7 +92,7 @@ export class HandleInboundMessage {
     // el hecho queda registrado (el operador lo ve en el workspace) pero el
     // Decision Engine no decide ni responde automáticamente.
     const session = await this.sessions.findById(Identity.of(sessionId));
-    if (session?.dimensions.metadata.operatorControl === true) {
+    if (session?.operatorControl === true) {
       return { status: "human-controlled" };
     }
 
@@ -140,17 +140,7 @@ export class HandleInboundMessage {
     // La relación existe pero todas sus Sessions están cerradas: se abre una
     // nueva unidad operativa sobre la misma Conversation (SSOT Cap. 7 §6: el
     // cierre de una Session no cierra la Conversation).
-    const session = Session.create(this.ids.next(), {
-      conversationId: conversation.id,
-      dimensions: {
-        state: { status: "active" },
-        memory: {},
-        context: {},
-        timeline: [{ at: this.clock.now(), kind: "session.started" }],
-        variables: {},
-        metadata: {},
-      },
-    });
+    const session = Session.open(this.ids.next(), conversation.id, this.clock.now());
     await this.sessions.save(session);
     return session.id.toString();
   }

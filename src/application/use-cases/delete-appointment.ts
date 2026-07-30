@@ -18,7 +18,7 @@ export class DeleteAppointment {
       throw new DomainError("DeleteAppointment: el Appointment no existe");
     }
 
-    await this.appointments.save(appointment.deleted());
+    await this.appointments.save(appointment.deleted(this.clock.now()));
 
     await this.timeline.append(
       AppointmentTimelineEntry.create(this.ids.next(), {

@@ -317,7 +317,7 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     getConversationMetrics: new GetConversationMetrics(reports),
     createTemplate: new CreateTemplate(ids, templates),
     updateTemplate: new UpdateTemplate(templates),
-    archiveTemplate: new ArchiveTemplate(templates),
+    archiveTemplate: new ArchiveTemplate(clock, templates),
     getTemplateDetail: new GetTemplateDetail(templates),
     listTemplates: new ListTemplates(templates),
     createAgent: new CreateAgent(ids, agents),

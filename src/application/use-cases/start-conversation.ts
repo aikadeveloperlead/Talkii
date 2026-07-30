@@ -43,17 +43,7 @@ export class StartConversation {
       participants: [input.participant],
     });
 
-    const session = Session.create(this.ids.next(), {
-      conversationId: conversation.id,
-      dimensions: {
-        state: { status: "active" },
-        memory: {},
-        context: {},
-        timeline: [{ at: this.clock.now(), kind: "session.started" }],
-        variables: {},
-        metadata: {},
-      },
-    });
+    const session = Session.open(this.ids.next(), conversation.id, this.clock.now());
 
     await this.conversations.save(conversation);
     await this.sessions.save(session);

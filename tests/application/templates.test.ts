@@ -7,18 +7,19 @@ import {
   ListTemplates,
   UpdateTemplate,
 } from "@/application/use-cases";
-import { InMemoryTemplates, SequentialIds } from "../fakes";
+import { FixedClock, InMemoryTemplates, SequentialIds } from "../fakes";
 
 const tenantId = "11111111-1111-1111-1111-111111111111";
 
 function setup() {
   const ids = new SequentialIds();
+  const clock = new FixedClock();
   const templates = new InMemoryTemplates();
   return {
     templates,
     createTemplate: new CreateTemplate(ids, templates),
     updateTemplate: new UpdateTemplate(templates),
-    archiveTemplate: new ArchiveTemplate(templates),
+    archiveTemplate: new ArchiveTemplate(clock, templates),
     getDetail: new GetTemplateDetail(templates),
     listTemplates: new ListTemplates(templates),
   };

@@ -44,7 +44,7 @@ export class GetConversationDetail {
         ? {
             id: session.id.toString(),
             status: session.state.status,
-            operatorControl: session.dimensions.metadata.operatorControl === true,
+            operatorControl: session.operatorControl,
           }
         : null,
     };

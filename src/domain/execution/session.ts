@@ -59,6 +59,21 @@ export class Session extends Entity {
     return new Session(id, props);
   }
 
+  /** Abre una Session nueva sobre una Conversation, con las dimensiones en su estado inicial. */
+  static open(id: Identity, conversationId: Identity, startedAt: Date): Session {
+    return Session.create(id, {
+      conversationId,
+      dimensions: {
+        state: { status: "active" },
+        memory: {},
+        context: {},
+        timeline: [{ at: startedAt, kind: "session.started" }],
+        variables: {},
+        metadata: {},
+      },
+    });
+  }
+
   get conversationId(): Identity {
     return this.props.conversationId;
   }
@@ -73,5 +88,20 @@ export class Session extends Entity {
 
   get isActive(): boolean {
     return this.props.dimensions.state.status === "active";
+  }
+
+  /** Bandera operativa (SCR-002 Estado 8): true mientras un operador humano tiene el control. */
+  get operatorControl(): boolean {
+    return this.props.dimensions.metadata.operatorControl === true;
+  }
+
+  withOperatorControl(enabled: boolean): Session {
+    return Session.create(this.id, {
+      ...this.props,
+      dimensions: {
+        ...this.props.dimensions,
+        metadata: { ...this.props.dimensions.metadata, operatorControl: enabled },
+      },
+    });
   }
 }

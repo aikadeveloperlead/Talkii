@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   Agent,
+  Appointment,
   Conversation,
   Customer,
   CustomerTimelineEntry,
@@ -12,6 +13,7 @@ import {
   Lead,
   Session,
   Tenant,
+  WhatsAppTemplate,
 } from "@/domain";
 
 const id = (v: string) => Identity.of(v);
@@ -109,6 +111,27 @@ describe("Session (SSOT Cap.7 §7)", () => {
     });
     expect(session.isActive).toBe(true);
   });
+
+  it("open(conversationId, startedAt) encapsula el estado inicial (evita duplicar la construcción a mano en cada caso de uso)", () => {
+    const startedAt = new Date("2026-01-01T00:00:00.000Z");
+    const session = Session.open(id("s1"), id("c1"), startedAt);
+
+    expect(session.isActive).toBe(true);
+    expect(session.dimensions.timeline).toEqual([{ at: startedAt, kind: "session.started" }]);
+    expect(session.dimensions.memory).toEqual({});
+    expect(session.dimensions.metadata).toEqual({});
+  });
+
+  it("operatorControl es un getter tipado (boolean), no un acceso crudo a metadata[unknown]", () => {
+    const session = Session.open(id("s1"), id("c1"), new Date("2026-01-01T00:00:00.000Z"));
+    expect(session.operatorControl).toBe(false);
+
+    const underControl = session.withOperatorControl(true);
+    expect(underControl.operatorControl).toBe(true);
+
+    const released = underControl.withOperatorControl(false);
+    expect(released.operatorControl).toBe(false);
+  });
 });
 
 describe("Decision (SSOT Cap.7 §9)", () => {
@@ -174,8 +197,48 @@ describe("Customer (SCR-003, bounded context CRM)", () => {
     const tagged = updated.withTags(["vip", "demo"]);
     expect(tagged.tags).toEqual(["vip", "demo"]);
 
-    const archived = tagged.archived();
+    const fixedDate = new Date("2026-01-01T00:00:00.000Z");
+    const archived = tagged.archived(fixedDate);
     expect(archived.isArchived).toBe(true);
+    expect(archived.archivedAt).toEqual(fixedDate);
+  });
+});
+
+describe("Appointment (SCR-004, bounded context Scheduling)", () => {
+  it("deleted(at) recibe el instante en vez de leer el reloj del sistema", () => {
+    const appointment = Appointment.create(id("ap1"), {
+      tenantId: id("t1"),
+      calendarId: id("cal1"),
+      title: "Demo",
+      status: "scheduled",
+      timezone: "America/Bogota",
+      startsAt: new Date("2026-01-01T10:00:00.000Z"),
+      endsAt: new Date("2026-01-01T11:00:00.000Z"),
+    });
+
+    const fixedDate = new Date("2026-01-02T00:00:00.000Z");
+    const deleted = appointment.deleted(fixedDate);
+    expect(deleted.isDeleted).toBe(true);
+    expect(deleted.deletedAt).toEqual(fixedDate);
+  });
+});
+
+describe("WhatsAppTemplate (SCR-006)", () => {
+  it("archived(at) recibe el instante en vez de leer el reloj del sistema", () => {
+    const template = WhatsAppTemplate.create(id("tpl1"), {
+      tenantId: id("t1"),
+      name: "Bienvenida",
+      language: "es",
+      category: "MARKETING",
+      components: { body: "Hola" as string, buttons: [] },
+      status: "draft",
+      version: 1,
+    });
+
+    const fixedDate = new Date("2026-01-03T00:00:00.000Z");
+    const archived = template.archived(fixedDate);
+    expect(archived.isArchived).toBe(true);
+    expect(archived.archivedAt).toEqual(fixedDate);
   });
 });
 

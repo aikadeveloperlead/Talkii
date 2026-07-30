@@ -21,7 +21,7 @@ export class ArchiveCustomer {
       throw new DomainError("ArchiveCustomer: el Customer no existe");
     }
 
-    await this.customers.save(customer.archived());
+    await this.customers.save(customer.archived(this.clock.now()));
 
     await this.timeline.append(
       CustomerTimelineEntry.create(this.ids.next(), {

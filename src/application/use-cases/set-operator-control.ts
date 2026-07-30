@@ -1,14 +1,15 @@
-import { DomainError, Identity, Session } from "@/domain";
+import { DomainError, Identity } from "@/domain";
 import { SessionRepository } from "../ports/repositories";
 
 /**
  * SetOperatorControl — intervención humana sobre el Runtime (SCR-002 §7
  * POST /conversation/intervention y POST /conversation/return-agent, Estado 8).
  *
- * `operatorControl` vive en `Session.dimensions.metadata`: es una bandera
- * operativa sin identidad propia (SSOT Cap. 7 §11 excluye estas dimensiones
- * como entidades), no una entidad nueva. HandleInboundMessage la respeta para
- * dejar de decidir automáticamente mientras un operador tiene el control.
+ * `operatorControl` es una bandera operativa sin identidad propia (SSOT
+ * Cap. 7 §11 excluye estas dimensiones como entidades), expuesta vía
+ * `Session.operatorControl`/`withOperatorControl`, no una entidad nueva.
+ * HandleInboundMessage la respeta para dejar de decidir automáticamente
+ * mientras un operador tiene el control.
  */
 export interface SetOperatorControlInput {
   conversationId: string;
@@ -28,13 +29,6 @@ export class SetOperatorControl {
       );
     }
 
-    const updated = Session.create(session.id, {
-      conversationId: session.conversationId,
-      dimensions: {
-        ...session.dimensions,
-        metadata: { ...session.dimensions.metadata, operatorControl: input.enabled },
-      },
-    });
-    await this.sessions.save(updated);
+    await this.sessions.save(session.withOperatorControl(input.enabled));
   }
 }

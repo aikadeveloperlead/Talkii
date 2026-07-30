@@ -85,8 +85,8 @@ export class Appointment extends Entity {
     return Appointment.create(this.id, { ...this.props, startsAt, endsAt });
   }
 
-  deleted(): Appointment {
-    return Appointment.create(this.id, { ...this.props, deletedAt: new Date() });
+  deleted(deletedAt: Date): Appointment {
+    return Appointment.create(this.id, { ...this.props, deletedAt });
   }
 
   /** Se solapa con otro rango [startsAt, endsAt) del mismo Calendar. */

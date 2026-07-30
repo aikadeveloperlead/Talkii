@@ -128,7 +128,7 @@ export class Customer extends Entity {
     return Customer.create(this.id, { ...this.props, tags });
   }
 
-  archived(): Customer {
-    return Customer.create(this.id, { ...this.props, archivedAt: new Date() });
+  archived(archivedAt: Date): Customer {
+    return Customer.create(this.id, { ...this.props, archivedAt });
   }
 }
