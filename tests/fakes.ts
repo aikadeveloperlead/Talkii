@@ -248,8 +248,11 @@ export class FakeMessageSender implements MessageSender {
  * la aplicación funciona sin depender de ningún LLM (AA-02).
  */
 export class StubDecisionEngine implements IDecisionEngine {
+  /** Captura el último Context recibido, para inspeccionar en tests (p. ej. history). */
+  lastContext?: ExecutionContext;
   constructor(private readonly ids: IdGenerator) {}
   async decide(context: ExecutionContext): Promise<Decision> {
+    this.lastContext = context;
     return Decision.create(this.ids.next(), {
       sessionId: context.session.id,
       eventId: context.event.id,

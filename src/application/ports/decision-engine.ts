@@ -1,6 +1,19 @@
 import { Agent, Decision, Event, Funnel, Session } from "@/domain";
 
 /**
+ * ConversationHistoryEntry — un turno ya intercambiado de la Conversation
+ * (memoria conversacional), reconstruido desde los Events "message.received"/
+ * "message.sent" de todas las Sessions de la Conversation — mismo criterio de
+ * proyección que ListConversationMessages (AA-01: sin tabla `message` paralela
+ * al log de Events, que ya es la fuente de verdad).
+ */
+export interface ConversationHistoryEntry {
+  readonly sender: "customer" | "agent";
+  readonly text: string;
+  readonly at: Date;
+}
+
+/**
  * ExecutionContext — el Context efímero del Modelo de Ejecución (SSOT Cap. 11
  * §6): una fotografía temporal del dominio construida para interpretar un Event.
  * Se construye para una ejecución específica y deja de existir al terminar.
@@ -12,6 +25,11 @@ export interface ExecutionContext {
   readonly funnel: Funnel | null;
   /** Agregado de State/Memory/Variables relevante para la interpretación. */
   readonly snapshot: Record<string, unknown>;
+  /**
+   * Turnos previos de la Conversation (memoria conversacional), orden
+   * cronológico ascendente, excluyendo el Event que se está interpretando.
+   */
+  readonly history: ReadonlyArray<ConversationHistoryEntry>;
 }
 
 /**

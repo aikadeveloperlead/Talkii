@@ -128,4 +128,57 @@ describe("Modelo de Ejecución end-to-end (SSOT Cap. 11)", () => {
     expect(stored?.source).toBe("deterministic-engine");
     expect(stored?.actions).toHaveLength(1);
   });
+
+  it("MakeDecision arma el Context con los turnos previos de la Conversation (memoria conversacional — hallazgo crítico #1 de auditoría)", async () => {
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "hola" },
+    });
+    await ingest.execute({
+      sessionId,
+      type: "message.sent",
+      payload: { text: "¿en qué puedo ayudarte?" },
+    });
+    const { eventId: currentEventId } = await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "quiero precios" },
+    });
+
+    const agent = Agent.create(ids.next(), {
+      tenantId: Identity.of("t1"),
+      name: "Ventas",
+      objective: "calificar leads",
+      permanentPrompt: "eres un asistente de ventas",
+      policies: [],
+      reasoningProfile: "sales-default",
+    });
+    await agents.save(agent);
+
+    const engine = new StubDecisionEngine(ids);
+    const makeDecision = new MakeDecision(
+      engine,
+      events,
+      sessions,
+      agents,
+      funnels,
+      decisions,
+    );
+
+    await makeDecision.execute({ eventId: currentEventId, agentId: agent.id.toString() });
+
+    expect(engine.lastContext?.history).toEqual([
+      { sender: "customer", text: "hola", at: clock.now() },
+      { sender: "agent", text: "¿en qué puedo ayudarte?", at: clock.now() },
+    ]);
+  });
 });

@@ -26,13 +26,17 @@ export class ReasoningBackedDecisionEngine implements IDecisionEngine {
   ) {}
 
   async decide(context: ExecutionContext): Promise<Decision> {
-    const { event, session, agent, funnel, snapshot } = context;
+    const { event, session, agent, funnel, snapshot, history } = context;
 
     const request: ReasoningRequest = {
       profile: agent.reasoningProfile,
       instructions: buildInstructions(agent, funnel),
       input: extractInput(event),
-      context: snapshot,
+      // Memoria conversacional (hallazgo crítico de auditoría): los turnos
+      // previos de la Conversation viajan junto al snapshot de State/Memory/
+      // Variables — ambos proveedores (Anthropic/OpenAI) ya vuelcan `context`
+      // completo en el prompt.
+      context: history.length ? { ...snapshot, history } : snapshot,
     };
 
     const result = await this.reasoning.reason(request);

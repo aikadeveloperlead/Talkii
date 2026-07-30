@@ -15,7 +15,11 @@ export type {
   ReasoningRequest,
   ReasoningResult,
 } from "./reasoning-provider";
-export type { IDecisionEngine, ExecutionContext } from "./decision-engine";
+export type {
+  IDecisionEngine,
+  ExecutionContext,
+  ConversationHistoryEntry,
+} from "./decision-engine";
 export type { ChannelBinding, ChannelBindingResolver } from "./channel-binding";
 export type { AuthGateway, CreatedUser } from "./auth-gateway";
 export type {

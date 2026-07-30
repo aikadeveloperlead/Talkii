@@ -1,5 +1,9 @@
-import { DomainError, Identity } from "@/domain";
-import { ExecutionContext, IDecisionEngine } from "../ports/decision-engine";
+import { DomainError, Identity, Session } from "@/domain";
+import {
+  ConversationHistoryEntry,
+  ExecutionContext,
+  IDecisionEngine,
+} from "../ports/decision-engine";
 import {
   AgentRepository,
   ConversationRepository,
@@ -8,6 +12,15 @@ import {
   FunnelRepository,
   SessionRepository,
 } from "../ports/repositories";
+
+/** Tipos de Event que representan un turno de mensaje intercambiado. */
+const MESSAGE_EVENT_TYPES: Record<string, "customer" | "agent"> = {
+  "message.received": "customer",
+  "message.sent": "agent",
+};
+
+/** Techo de turnos previos incluidos como memoria conversacional (evita prompts sin límite). */
+const HISTORY_LIMIT = 20;
 
 /**
  * MakeDecision — núcleo del comportamiento (SSOT Cap. 11 §6–8).
@@ -60,6 +73,8 @@ export class MakeDecision {
       ? await this.funnels.findById(Identity.of(input.funnelId))
       : null;
 
+    const history = await this.buildHistory(session, event.id);
+
     // Construcción del Context efímero (SSOT Cap. 11 §6).
     const context: ExecutionContext = {
       event,
@@ -71,6 +86,7 @@ export class MakeDecision {
         memory: session.dimensions.memory,
         variables: session.dimensions.variables,
       },
+      history,
     };
 
     // Interpretación + producción de la Decision (AA-02: el origen es abstracto).
@@ -85,5 +101,35 @@ export class MakeDecision {
     await this.decisions.save(decision);
 
     return { decisionId: decision.id.toString() };
+  }
+
+  /**
+   * Reconstruye los turnos previos de la Conversation entera (todas sus
+   * Sessions, activas o cerradas — una relación puede reabrir Sessions) a
+   * partir de los Events ya registrados, excluyendo el Event que se está
+   * interpretando. Mismo criterio de proyección que ListConversationMessages
+   * (AA-01): sin tabla `message` paralela al log de Events.
+   */
+  private async buildHistory(
+    session: Session,
+    currentEventId: Identity,
+  ): Promise<ConversationHistoryEntry[]> {
+    const sessions = await this.sessions.findAllByConversation(session.conversationId);
+
+    const turns: ConversationHistoryEntry[] = [];
+    for (const s of sessions) {
+      const events = await this.events.findBySession(s.id);
+      for (const e of events) {
+        if (e.id.equals(currentEventId)) continue;
+        const sender = MESSAGE_EVENT_TYPES[e.type];
+        if (!sender) continue;
+        const text = typeof e.payload.text === "string" ? e.payload.text : "";
+        if (!text) continue;
+        turns.push({ sender, text, at: e.occurredAt });
+      }
+    }
+
+    turns.sort((a, b) => a.at.getTime() - b.at.getTime());
+    return turns.slice(-HISTORY_LIMIT);
   }
 }

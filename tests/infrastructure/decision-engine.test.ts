@@ -56,6 +56,7 @@ function buildContext(overrides: Partial<ExecutionContext> = {}): ExecutionConte
     agent,
     funnel: null,
     snapshot: { state: session.state, memory: session.dimensions.memory },
+    history: [],
     ...overrides,
   };
 }
@@ -110,5 +111,33 @@ describe("ReasoningBackedDecisionEngine (AA-02: engine independiente del LLM)", 
 
     expect(decision.actions).toHaveLength(0);
     expect(decision.source).toBe("ai-model");
+  });
+
+  it("incluye los turnos previos de la Conversation en el context del razonamiento (memoria conversacional)", async () => {
+    const provider = new FakeReasoningProvider();
+    const engine = new ReasoningBackedDecisionEngine(provider, new SequentialIds());
+    const history = [
+      { sender: "customer" as const, text: "hola", at: new Date("2026-07-14T23:00:00.000Z") },
+      {
+        sender: "agent" as const,
+        text: "¿en qué puedo ayudarte?",
+        at: new Date("2026-07-14T23:01:00.000Z"),
+      },
+    ];
+
+    await engine.decide(buildContext({ history }));
+
+    const req = provider.lastRequest!;
+    expect(req.context.history).toEqual(history);
+  });
+
+  it("cuando no hay historial previo, el context del razonamiento no incluye la clave history", async () => {
+    const provider = new FakeReasoningProvider();
+    const engine = new ReasoningBackedDecisionEngine(provider, new SequentialIds());
+
+    await engine.decide(buildContext());
+
+    const req = provider.lastRequest!;
+    expect(req.context).not.toHaveProperty("history");
   });
 });
