@@ -1,4 +1,6 @@
-import { DomainError, Identity, Session } from "@/domain";
+import { DomainError, Event, Identity, Session } from "@/domain";
+import { Clock } from "../ports/clock";
+import { IdGenerator } from "../ports/id-generator";
 import {
   ConversationHistoryEntry,
   ExecutionContext,
@@ -51,6 +53,8 @@ export class MakeDecision {
     private readonly agents: AgentRepository,
     private readonly funnels: FunnelRepository,
     private readonly decisions: DecisionRepository,
+    private readonly ids: IdGenerator,
+    private readonly clock: Clock,
   ) {}
 
   async execute(input: MakeDecisionInput): Promise<MakeDecisionResult> {
@@ -90,7 +94,29 @@ export class MakeDecision {
     };
 
     // Interpretación + producción de la Decision (AA-02: el origen es abstracto).
-    const decision = await this.engine.decide(context);
+    let decision;
+    try {
+      decision = await this.engine.decide(context);
+    } catch (error) {
+      // Hallazgo de auditoría (item 10): un fallo del Reasoning Provider no
+      // debe perder el mensaje sin dejar rastro. Se deja un Event consultable
+      // en el mismo log que ya usa ListConversationMessages/buildHistory
+      // (AA-01 — sin tabla nueva), y se relanza para preservar el contrato
+      // existente (el caller decide cómo responder al fallo).
+      await this.events.append(
+        Event.create(this.ids.next(), {
+          sessionId: session.id,
+          type: "reasoning.failed",
+          occurredAt: this.clock.now(),
+          payload: {
+            eventId: event.id.toString(),
+            agentId: agent.id.toString(),
+            error: error instanceof Error ? error.message : String(error),
+          },
+        }),
+      );
+      throw error;
+    }
 
     if (!decision.eventId.equals(event.id)) {
       throw new DomainError(

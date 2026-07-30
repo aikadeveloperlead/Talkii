@@ -273,6 +273,14 @@ export class StubDecisionEngine implements IDecisionEngine {
   }
 }
 
+/** Decision Engine que siempre falla — para probar el trazado de fallos del Reasoning Provider (item 10). */
+export class FailingDecisionEngine implements IDecisionEngine {
+  constructor(private readonly error: Error) {}
+  async decide(): Promise<Decision> {
+    throw this.error;
+  }
+}
+
 /** AuthGateway falso: registra las asignaciones y altas; puede inyectarse para fallar. */
 export class FakeAuthGateway implements AuthGateway {
   assignments: { userId: string; tenantId: string }[] = [];

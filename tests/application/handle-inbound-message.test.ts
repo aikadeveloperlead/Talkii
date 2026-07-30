@@ -73,6 +73,8 @@ function setup() {
       agents,
       funnels,
       decisions,
+      ids,
+      clock,
     ),
     new ExecuteDecision(ids, clock, decisions, events, sender),
   );

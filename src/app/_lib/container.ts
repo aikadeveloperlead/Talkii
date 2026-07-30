@@ -254,7 +254,16 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
 
   const startConversation = new StartConversation(ids, clock, conversations, sessions);
   const ingestEvent = new IngestEvent(ids, clock, sessions, events);
-  const makeDecision = new MakeDecision(engine, events, sessions, agents, funnels, decisions);
+  const makeDecision = new MakeDecision(
+    engine,
+    events,
+    sessions,
+    agents,
+    funnels,
+    decisions,
+    ids,
+    clock,
+  );
   const executeDecision = new ExecuteDecision(ids, clock, decisions, events, sender);
 
   return {

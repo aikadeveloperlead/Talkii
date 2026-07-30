@@ -6,6 +6,7 @@ import {
   StartConversation,
 } from "@/application/use-cases";
 import {
+  FailingDecisionEngine,
   FixedClock,
   InMemoryAgents,
   InMemoryConversations,
@@ -113,6 +114,8 @@ describe("Modelo de Ejecución end-to-end (SSOT Cap. 11)", () => {
       agents,
       funnels,
       decisions,
+      ids,
+      clock,
     );
 
     const { decisionId } = await makeDecision.execute({
@@ -172,6 +175,8 @@ describe("Modelo de Ejecución end-to-end (SSOT Cap. 11)", () => {
       agents,
       funnels,
       decisions,
+      ids,
+      clock,
     );
 
     await makeDecision.execute({ eventId: currentEventId, agentId: agent.id.toString() });
@@ -234,11 +239,64 @@ describe("Modelo de Ejecución end-to-end (SSOT Cap. 11)", () => {
       agents,
       funnels,
       decisions,
+      ids,
+      clock,
     );
 
     await makeDecision.execute({ eventId: currentEventId, agentId: agent.id.toString() });
 
     expect(events.findBySessionsCalls).toBe(1);
     expect(events.findBySessionCalls).toBe(0);
+  });
+
+  it("MakeDecision deja un Event 'reasoning.failed' consultable cuando el Reasoning Provider falla (item 10, silent-failure)", async () => {
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    const { eventId } = await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "hola" },
+    });
+
+    const agent = Agent.create(ids.next(), {
+      tenantId: Identity.of("t1"),
+      name: "Ventas",
+      objective: "calificar leads",
+      permanentPrompt: "eres un asistente de ventas",
+      policies: [],
+      reasoningProfile: "sales-default",
+    });
+    await agents.save(agent);
+
+    const engine = new FailingDecisionEngine(new Error("timeout del proveedor"));
+    const makeDecision = new MakeDecision(
+      engine,
+      events,
+      sessions,
+      agents,
+      funnels,
+      decisions,
+      ids,
+      clock,
+    );
+
+    await expect(
+      makeDecision.execute({ eventId, agentId: agent.id.toString() }),
+    ).rejects.toThrow("timeout del proveedor");
+
+    const sessionEvents = await events.findBySession(Identity.of(sessionId));
+    const failure = sessionEvents.find((e) => e.type === "reasoning.failed");
+    expect(failure).toBeDefined();
+    expect(failure?.payload).toMatchObject({
+      eventId,
+      agentId: agent.id.toString(),
+      error: "timeout del proveedor",
+    });
   });
 });
