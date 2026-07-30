@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  AnthropicReasoningProvider,
   OpenAIReasoningProvider,
   ReasoningBackedDecisionEngine,
   SupabaseAgentKnowledgeRepository,
@@ -111,6 +112,7 @@ import {
 import type {
   ExecutionContext,
   IDecisionEngine,
+  IReasoningProvider,
   MessageSender,
 } from "@/application/ports";
 
@@ -220,12 +222,13 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
   const events = new SupabaseEventRepository(db);
   const decisions = new SupabaseDecisionRepository(db);
 
-  // El proveedor OpenAI exige OPENAI_API_KEY; se construye solo al primer
-  // `decide` para que montar el container no dependa de esa clave.
+  // El proveedor exige su API key (OPENAI_API_KEY/ANTHROPIC_API_KEY); se
+  // construye solo al primer `decide` para que montar el container no
+  // dependa de esa clave.
   const engine =
     options.decisionEngine ??
     lazyDecisionEngine(
-      () => new ReasoningBackedDecisionEngine(new OpenAIReasoningProvider(), ids),
+      () => new ReasoningBackedDecisionEngine(selectReasoningProvider(), ids),
     );
 
   const bindings = new SupabaseChannelBindingResolver(db);
@@ -377,6 +380,20 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
     getPreferences: new GetPreferences(preferencesRepo),
     updatePreferences: new UpdatePreferences(ids, preferencesRepo),
   };
+}
+
+/**
+ * Elige el IReasoningProvider concreto vía `REASONING_PROVIDER` ("openai" por
+ * defecto | "anthropic"). AA-02 (Decision Engine Independence): antes de este
+ * fix la elección estaba hardcodeada a OpenAI en el código — AnthropicReasoningProvider
+ * existía pero nunca se instanciaba fuera de su propio archivo. Exportada para
+ * probar la selección sin depender de credenciales reales de ninguno de los
+ * dos proveedores (cada uno exige su propia API key al construirse).
+ */
+export function selectReasoningProvider(): IReasoningProvider {
+  const choice = (process.env.REASONING_PROVIDER ?? "openai").trim().toLowerCase();
+  if (choice === "anthropic") return new AnthropicReasoningProvider();
+  return new OpenAIReasoningProvider();
 }
 
 /** Envuelve un IDecisionEngine cuya construcción se difiere al primer `decide`. */
