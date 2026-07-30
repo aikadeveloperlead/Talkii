@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireContainer, toErrorResponse, unauthorized } from "@/app/_lib/route-container";
+import { updateAgentSchema } from "@/app/_lib/validation";
 
 /** GET/PUT/DELETE /api/agents/:id — SCR-008 §6.1 (DELETE archiva, BK-04 nunca elimina físicamente). */
 export async function GET(
@@ -26,7 +27,7 @@ export async function PUT(
   if (!container) return unauthorized();
   try {
     const { id } = await params;
-    const body = await request.json();
+    const body = updateAgentSchema.parse(await request.json());
     await container.updateAgent.execute({ agentId: id, ...body });
     return NextResponse.json({ success: true, message: "Agent updated successfully." });
   } catch (error) {

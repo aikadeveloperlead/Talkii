@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireContainer, toErrorResponse, unauthorized } from "@/app/_lib/route-container";
+import { updateKnowledgeDocumentSchema } from "@/app/_lib/validation";
 
 /** GET/PUT/DELETE /api/knowledge/:id — SCR-009 §6.1 (DELETE archiva, BK-04). */
 export async function GET(
@@ -26,7 +27,7 @@ export async function PUT(
   if (!container) return unauthorized();
   try {
     const { id } = await params;
-    const body = await request.json();
+    const body = updateKnowledgeDocumentSchema.parse(await request.json());
     await container.updateKnowledgeDocument.execute({ knowledgeId: id, ...body });
     return NextResponse.json({ success: true });
   } catch (error) {

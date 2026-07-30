@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireContainer, toErrorResponse, unauthorized } from "@/app/_lib/route-container";
+import { updateFunnelStepSchema } from "@/app/_lib/validation";
 
 /** PUT/DELETE /api/funnels/:id/steps/:stepKey — SCR-010 §6.2 (adaptado, ver nota en steps/route.ts). */
 export async function PUT(
@@ -10,7 +11,7 @@ export async function PUT(
   if (!container) return unauthorized();
   try {
     const { id, stepKey } = await params;
-    const body = await request.json();
+    const body = updateFunnelStepSchema.parse(await request.json());
     await container.updateFunnelStep.execute(id, stepKey, body);
     return NextResponse.json({ success: true });
   } catch (error) {

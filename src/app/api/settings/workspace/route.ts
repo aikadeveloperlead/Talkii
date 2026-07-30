@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireTenantContainer, toErrorResponse, unauthorized } from "@/app/_lib/route-container";
+import { updateWorkspaceSchema } from "@/app/_lib/validation";
 
 /** GET/PUT /api/settings/workspace — SCR-012 §6.1. */
 export async function GET() {
@@ -17,7 +18,7 @@ export async function PUT(request: Request) {
   const scope = await requireTenantContainer();
   if (!scope) return unauthorized();
   try {
-    const body = await request.json();
+    const body = updateWorkspaceSchema.parse(await request.json());
     await scope.container.updateWorkspace.execute({ tenantId: scope.tenantId, ...body });
     return NextResponse.json({ success: true, message: "Settings updated successfully." });
   } catch (error) {

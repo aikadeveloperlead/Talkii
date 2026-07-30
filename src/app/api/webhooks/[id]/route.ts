@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireContainer, toErrorResponse, unauthorized } from "@/app/_lib/route-container";
+import { updateWebhookSchema } from "@/app/_lib/validation";
 
 /** GET/PUT/DELETE /api/webhooks/:id — SCR-011 §6.1 (DELETE archiva). */
 export async function GET(
@@ -26,7 +27,7 @@ export async function PUT(
   if (!container) return unauthorized();
   try {
     const { id } = await params;
-    const body = await request.json();
+    const body = updateWebhookSchema.parse(await request.json());
     await container.updateWebhook.execute({ webhookId: id, ...body });
     return NextResponse.json({ success: true, message: "Webhook updated successfully." });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireContainer, toErrorResponse, unauthorized } from "@/app/_lib/route-container";
+import { updateCustomerSchema } from "@/app/_lib/validation";
 
 /** GET /api/customers/:id — SCR-003 §7. */
 export async function GET(
@@ -31,7 +32,7 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const body = await request.json();
+    const body = updateCustomerSchema.parse(await request.json());
     await container.updateCustomer.execute({ customerId: id, ...body });
     return NextResponse.json({ ok: true });
   } catch (error) {

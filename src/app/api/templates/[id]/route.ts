@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireContainer, toErrorResponse, unauthorized } from "@/app/_lib/route-container";
+import { updateTemplateSchema } from "@/app/_lib/validation";
 
 /** GET/PUT/DELETE /api/templates/:id — SCR-006. */
 export async function GET(
@@ -26,7 +27,7 @@ export async function PUT(
   if (!container) return unauthorized();
   try {
     const { id } = await params;
-    const body = await request.json();
+    const body = updateTemplateSchema.parse(await request.json());
     await container.updateTemplate.execute({
       templateId: id,
       name: body.name,

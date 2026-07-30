@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { DomainError } from "@/domain";
 import { createContainer, type Container } from "./container";
 import { createServerSupabase } from "./supabase-server";
@@ -48,6 +49,12 @@ export function unauthorized(): NextResponse {
 
 /** Traduce errores del caso de uso a la respuesta HTTP (SCR-002 §7 Errores). */
 export function toErrorResponse(error: unknown): NextResponse {
+  if (error instanceof ZodError) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: error.issues },
+      { status: 400 },
+    );
+  }
   if (error instanceof DomainError) {
     return NextResponse.json({ error: error.message }, { status: 409 });
   }
