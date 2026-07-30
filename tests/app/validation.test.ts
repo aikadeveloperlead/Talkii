@@ -116,3 +116,80 @@ describe("Esquemas de validación de rutas PUT", () => {
     expect(schema.safeParse(invalid).success).toBe(false);
   });
 });
+
+/**
+ * Item BAJO #1 de la auditoría: las rutas PUT hacen
+ * `{ tenantId: scope.tenantId, ...body }` / `{ webhookId: id, ...body }` —
+ * si `body` trajera esas mismas claves, el spread (que gana con el último
+ * valor) las pisaría. Verificado: los 8 esquemas de rutas settings+[id] son
+ * z.object() en modo "strip" (default de Zod, sin .passthrough()), así que
+ * .parse() descarta cualquier clave no declarada — tenantId/webhookId/
+ * customerId/funnelId/knowledgeId/agentId JAMÁS sobreviven en `body`. El
+ * hallazgo ya estaba cerrado como efecto colateral de la validación zod
+ * (item 8b) antes de que existiera este test; se deja como regresión.
+ */
+describe("Zod strip mode impide que el body pise tenantId/ids (item BAJO #1)", () => {
+  const spoofCases: {
+    name: string;
+    schema: { parse: (v: unknown) => Record<string, unknown> };
+    spoofedKey: string;
+    validPayload: Record<string, unknown>;
+  }[] = [
+    {
+      name: "updatePreferencesSchema",
+      schema: updatePreferencesSchema,
+      spoofedKey: "tenantId",
+      validPayload: { language: "es" },
+    },
+    {
+      name: "updateCompanySchema",
+      schema: updateCompanySchema,
+      spoofedKey: "tenantId",
+      validPayload: { businessName: "Aika" },
+    },
+    {
+      name: "updateWorkspaceSchema",
+      schema: updateWorkspaceSchema,
+      spoofedKey: "tenantId",
+      validPayload: { name: "Aika" },
+    },
+    {
+      name: "updateWebhookSchema",
+      schema: updateWebhookSchema,
+      spoofedKey: "webhookId",
+      validPayload: { name: "Hook" },
+    },
+    {
+      name: "updateFunnelSchema",
+      schema: updateFunnelSchema,
+      spoofedKey: "funnelId",
+      validPayload: { name: "Ventas" },
+    },
+    {
+      name: "updateKnowledgeDocumentSchema",
+      schema: updateKnowledgeDocumentSchema,
+      spoofedKey: "knowledgeId",
+      validPayload: { title: "FAQ" },
+    },
+    {
+      name: "updateCustomerSchema",
+      schema: updateCustomerSchema,
+      spoofedKey: "customerId",
+      validPayload: { firstName: "Ana" },
+    },
+    {
+      name: "updateAgentSchema",
+      schema: updateAgentSchema,
+      spoofedKey: "agentId",
+      validPayload: { name: "Ventas" },
+    },
+  ];
+
+  it.each(spoofCases)(
+    "$name descarta '$spoofedKey' inyectado en el body",
+    ({ schema, spoofedKey, validPayload }) => {
+      const parsed = schema.parse({ ...validPayload, [spoofedKey]: "otro-tenant-o-id" });
+      expect(parsed).not.toHaveProperty(spoofedKey);
+    },
+  );
+});
