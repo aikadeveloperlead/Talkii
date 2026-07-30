@@ -1,6 +1,7 @@
 import { Decision, DomainError, Event, Identity, Session } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
+import { ReasoningProviderError } from "../ports/reasoning-provider";
 import {
   ConversationHistoryEntry,
   ExecutionContext,
@@ -153,6 +154,7 @@ export class MakeDecision {
             eventId: event.id.toString(),
             agentId: agent.id.toString(),
             error: error instanceof Error ? error.message : String(error),
+            errorKind: error instanceof ReasoningProviderError ? error.kind : "unknown",
           },
         }),
       );

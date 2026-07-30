@@ -28,3 +28,28 @@ export interface ReasoningResult {
 export interface IReasoningProvider {
   reason(request: ReasoningRequest): Promise<ReasoningResult>;
 }
+
+/**
+ * Distingue el motivo de un fallo del Reasoning Provider: "auth" (credencial
+ * inválida, permanente — reintentar no ayuda) de "rate-limit" (transitorio —
+ * un reintento con backoff sí podría servir) de "unknown" (el resto).
+ */
+export type ReasoningErrorKind = "auth" | "rate-limit" | "unknown";
+
+/** Error tipado que los adaptadores concretos (Anthropic/OpenAI) deben lanzar. */
+export class ReasoningProviderError extends Error {
+  readonly kind: ReasoningErrorKind;
+
+  constructor(message: string, kind: ReasoningErrorKind) {
+    super(message);
+    this.name = "ReasoningProviderError";
+    this.kind = kind;
+  }
+}
+
+/** Clasifica un status HTTP en el ReasoningErrorKind correspondiente. */
+export function classifyReasoningError(status: number): ReasoningErrorKind {
+  if (status === 401 || status === 403) return "auth";
+  if (status === 429) return "rate-limit";
+  return "unknown";
+}

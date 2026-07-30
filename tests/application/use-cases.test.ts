@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { Agent, DomainError, Identity, Session } from "@/domain";
+import { ReasoningProviderError } from "@/application/ports";
 import {
   IngestEvent,
   MakeDecision,
@@ -319,7 +320,56 @@ describe("Modelo de Ejecución end-to-end (SSOT Cap. 11)", () => {
       eventId,
       agentId: agent.id.toString(),
       error: "timeout del proveedor",
+      errorKind: "unknown",
     });
+  });
+
+  it("MakeDecision distingue error 'auth' (permanente) de un fallo genérico en el Event 'reasoning.failed' (item BAJO #19)", async () => {
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    const { eventId } = await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "hola" },
+    });
+
+    const agent = Agent.create(ids.next(), {
+      tenantId: Identity.of("t1"),
+      name: "Ventas",
+      objective: "calificar leads",
+      permanentPrompt: "eres un asistente de ventas",
+      policies: [],
+      reasoningProfile: "sales-default",
+    });
+    await agents.save(agent);
+
+    const engine = new FailingDecisionEngine(
+      new ReasoningProviderError("credencial inválida", "auth"),
+    );
+    const makeDecision = new MakeDecision(
+      engine,
+      events,
+      sessions,
+      agents,
+      funnels,
+      decisions,
+      ids,
+      clock,
+    );
+
+    await expect(
+      makeDecision.execute({ eventId, agentId: agent.id.toString() }),
+    ).rejects.toThrow("credencial inválida");
+
+    const sessionEvents = await events.findBySession(Identity.of(sessionId));
+    const failure = sessionEvents.find((e) => e.type === "reasoning.failed");
+    expect(failure?.payload).toMatchObject({ errorKind: "auth" });
   });
 
   it("MakeDecision transfiere a operador sin llamar al Reasoning Provider cuando el texto contiene una transferKeyword del Agent (item 10)", async () => {

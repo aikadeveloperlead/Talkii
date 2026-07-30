@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { OpenAIReasoningProvider } from "@/infrastructure";
+import { ReasoningProviderError } from "@/application/ports";
 import type { ReasoningRequest } from "@/application/ports";
 
 function baseRequest(overrides: Partial<ReasoningRequest> = {}): ReasoningRequest {
@@ -78,6 +79,36 @@ describe("OpenAIReasoningProvider (adaptador IReasoningProvider sobre Chat Compl
     const provider = new OpenAIReasoningProvider({ apiKey: "sk-bad", fetchImpl });
 
     await expect(provider.reason(baseRequest())).rejects.toThrow(/401/);
+  });
+
+  it("marca 401 como error de tipo auth (permanente)", async () => {
+    const fetchImpl = fakeFetch({ error: { message: "invalid_api_key" } }, false, 401);
+    const provider = new OpenAIReasoningProvider({ apiKey: "sk-bad", fetchImpl });
+
+    const error = await provider.reason(baseRequest()).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ReasoningProviderError);
+    expect((error as ReasoningProviderError).kind).toBe("auth");
+  });
+
+  it("marca 429 como error de tipo rate-limit (transitorio)", async () => {
+    const fetchImpl = fakeFetch({ error: { message: "rate_limit_exceeded" } }, false, 429);
+    const provider = new OpenAIReasoningProvider({ apiKey: "sk-test", fetchImpl });
+
+    const error = await provider.reason(baseRequest()).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ReasoningProviderError);
+    expect((error as ReasoningProviderError).kind).toBe("rate-limit");
+  });
+
+  it("marca otros errores HTTP como unknown", async () => {
+    const fetchImpl = fakeFetch({ error: { message: "server_error" } }, false, 500);
+    const provider = new OpenAIReasoningProvider({ apiKey: "sk-test", fetchImpl });
+
+    const error = await provider.reason(baseRequest()).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ReasoningProviderError);
+    expect((error as ReasoningProviderError).kind).toBe("unknown");
   });
 
   it("cuando no hay content en la respuesta, produce output vacío", async () => {

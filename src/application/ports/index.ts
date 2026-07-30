@@ -14,7 +14,9 @@ export type {
   IReasoningProvider,
   ReasoningRequest,
   ReasoningResult,
+  ReasoningErrorKind,
 } from "./reasoning-provider";
+export { ReasoningProviderError, classifyReasoningError } from "./reasoning-provider";
 export type {
   IDecisionEngine,
   ExecutionContext,

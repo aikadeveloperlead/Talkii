@@ -1,7 +1,9 @@
-import type {
-  IReasoningProvider,
-  ReasoningRequest,
-  ReasoningResult,
+import {
+  classifyReasoningError,
+  ReasoningProviderError,
+  type IReasoningProvider,
+  type ReasoningRequest,
+  type ReasoningResult,
 } from "@/application/ports";
 
 /**
@@ -69,8 +71,9 @@ export class OpenAIReasoningProvider implements IReasoningProvider {
 
     if (!response.ok) {
       const detail = await safeText(response);
-      throw new Error(
+      throw new ReasoningProviderError(
         `OpenAIReasoningProvider: la API respondió ${response.status} ${response.statusText}. ${detail}`,
+        classifyReasoningError(response.status),
       );
     }
 
