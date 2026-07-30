@@ -3,6 +3,7 @@ import {
   Agent,
   Conversation,
   Decision,
+  DomainError,
   Event,
   Funnel,
   Identity,
@@ -200,7 +201,17 @@ export class SupabaseSessionRepository implements SessionRepository {
 
   async save(session: Session): Promise<void> {
     const { error } = await this.db.from("sessions").upsert(sessionToRow(session));
-    if (error) fail("sessions.upsert", error);
+    if (error) {
+      // Postgres 23505 (unique_violation) sobre sessions_one_active_per_conversation
+      // (0015_sessions_one_active.sql) — cierra la ventana de carrera de
+      // resolveActiveSession/HandleInboundMessage (item 10 de auditoría).
+      if ((error as { code?: string }).code === "23505") {
+        throw new DomainError(
+          "Session: ya existe una Session activa para esta Conversation",
+        );
+      }
+      fail("sessions.upsert", error);
+    }
   }
 
   async findById(id: Identity): Promise<Session | null> {

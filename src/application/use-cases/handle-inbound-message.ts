@@ -1,4 +1,4 @@
-import { Channel, Identity, Session } from "@/domain";
+import { Channel, DomainError, Identity, Session } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import type { ChannelBindingResolver } from "../ports/channel-binding";
@@ -141,7 +141,19 @@ export class HandleInboundMessage {
     // nueva unidad operativa sobre la misma Conversation (SSOT Cap. 7 §6: el
     // cierre de una Session no cierra la Conversation).
     const session = Session.open(this.ids.next(), conversation.id, this.clock.now());
-    await this.sessions.save(session);
+    try {
+      await this.sessions.save(session);
+    } catch (error) {
+      // Carrera perdida (item 10 de auditoría): otra request concurrente ya
+      // reabrió la Session activa antes que esta (índice único parcial,
+      // 0015_sessions_one_active.sql) — se usa la Session ganadora en vez de
+      // perder el mensaje entrante.
+      if (error instanceof DomainError) {
+        const winner = await this.sessions.findActiveByConversation(conversation.id);
+        if (winner) return winner.id.toString();
+      }
+      throw error;
+    }
     return session.id.toString();
   }
 }

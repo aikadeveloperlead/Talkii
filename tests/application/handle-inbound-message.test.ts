@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Agent, Decision, Identity, Session } from "@/domain";
+import { Agent, Decision, DomainError, Identity, Session } from "@/domain";
 import {
   ExecuteDecision,
   HandleInboundMessage,
@@ -12,6 +12,7 @@ import type {
   ExecutionContext,
   IDecisionEngine,
   IdGenerator,
+  SessionRepository,
 } from "@/application/ports";
 import {
   FakeMessageSender,
@@ -25,6 +26,38 @@ import {
   InMemorySessions,
   SequentialIds,
 } from "../fakes";
+
+/**
+ * Simula la carrera de item 10 (sub-item 5/5): la primera Session.save() de
+ * una Session activa "pierde" — otra request ya ganó y creó la suya (el
+ * índice único parcial de 0015_sessions_one_active.sql, a nivel de
+ * repositorio Supabase real, se traduce a este mismo DomainError) — las
+ * llamadas siguientes se comportan con normalidad.
+ */
+class ConflictOnceSessions implements SessionRepository {
+  private savedOnce = false;
+  constructor(
+    private readonly inner: InMemorySessions,
+    private readonly winner: Session,
+  ) {}
+  async save(session: Session): Promise<void> {
+    if (!this.savedOnce && session.isActive) {
+      this.savedOnce = true;
+      await this.inner.save(this.winner);
+      throw new DomainError("Session: ya existe una Session activa para esta Conversation");
+    }
+    return this.inner.save(session);
+  }
+  findById(id: Identity) {
+    return this.inner.findById(id);
+  }
+  findActiveByConversation(conversationId: Identity) {
+    return this.inner.findActiveByConversation(conversationId);
+  }
+  findAllByConversation(conversationId: Identity) {
+    return this.inner.findAllByConversation(conversationId);
+  }
+}
 
 /** Engine determinista que produce un plan message.send (para ver el loop entero). */
 class SendReplyEngine implements IDecisionEngine {
@@ -191,5 +224,74 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
 
     expect(result.status).toBe("human-controlled");
     expect(sender.sent).toHaveLength(1); // solo la primera respuesta automática
+  });
+
+  it("no pierde el mensaje si pierde la carrera al reabrir Session (item 10, usa la Session de quien ganó)", async () => {
+    const ids = new SequentialIds();
+    const clock = new FixedClock();
+    const agents = new InMemoryAgents();
+    const funnels = new InMemoryFunnels();
+    const conversations = new InMemoryConversations();
+    const realSessions = new InMemorySessions();
+    const events = new InMemoryEvents();
+    const decisions = new InMemoryDecisions();
+    const sender = new FakeMessageSender();
+    await seedAgent(agents);
+
+    // Conversation existente cuya única Session ya está cerrada — el próximo
+    // mensaje entrante entra por la rama que reabre Session (la que puede
+    // perder la carrera).
+    const conv = await new StartConversation(ids, clock, conversations, realSessions).execute({
+      tenantId: binding.tenantId,
+      channel: "whatsapp",
+      participant: { channelHandle: "573001112233", displayName: "Nicolás" },
+    });
+    const openSession = await realSessions.findById(Identity.of(conv.sessionId));
+    await realSessions.save(
+      Session.create(openSession!.id, {
+        conversationId: openSession!.conversationId,
+        dimensions: {
+          ...openSession!.dimensions,
+          state: { status: "closed" },
+        },
+      }),
+    );
+
+    // La Session "ganadora" que otra request concurrente ya persistió.
+    const winnerSession = Session.open(
+      ids.next(),
+      Identity.of(conv.conversationId),
+      clock.now(),
+    );
+    const racySessions = new ConflictOnceSessions(realSessions, winnerSession);
+
+    const useCase = new HandleInboundMessage(
+      new InMemoryChannelBindings([binding]),
+      conversations,
+      racySessions,
+      ids,
+      clock,
+      new StartConversation(ids, clock, conversations, racySessions),
+      new IngestEvent(ids, clock, racySessions, events),
+      new MakeDecision(
+        new SendReplyEngine(ids),
+        events,
+        racySessions,
+        agents,
+        funnels,
+        decisions,
+        ids,
+        clock,
+      ),
+      new ExecuteDecision(ids, clock, decisions, events, sender),
+    );
+
+    const result = await useCase.execute(inbound);
+
+    expect(result.status).toBe("processed");
+    // El mensaje quedó registrado bajo la Session que ganó la carrera, no perdido.
+    const eventsOnWinner = await events.findBySession(winnerSession.id);
+    expect(eventsOnWinner.some((e) => e.type === "message.received")).toBe(true);
+    expect(sender.sent).toHaveLength(1);
   });
 });
