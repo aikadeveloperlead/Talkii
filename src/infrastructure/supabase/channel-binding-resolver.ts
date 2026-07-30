@@ -4,8 +4,9 @@ import type {
   ChannelBinding,
   ChannelBindingResolver,
 } from "@/application/ports";
+import { decryptToken } from "../security/token-cipher";
 
-/** Fila de public.channel_bindings (migración 0002). */
+/** Fila de public.channel_bindings (migración 0002). `access_token` guarda el texto cifrado (token-cipher.ts, hallazgo MEDIO de auditoría). */
 interface ChannelBindingRow {
   tenant_id: string;
   channel: Channel;
@@ -16,13 +17,23 @@ interface ChannelBindingRow {
 }
 
 function rowToBinding(row: ChannelBindingRow): ChannelBinding {
+  let accessToken: string | undefined;
+  if (row.access_token) {
+    const key = process.env.ENCRYPTION_KEY;
+    if (!key) {
+      throw new Error(
+        "SupabaseChannelBindingResolver: falta ENCRYPTION_KEY en el entorno para descifrar access_token.",
+      );
+    }
+    accessToken = decryptToken(row.access_token, key);
+  }
   return {
     tenantId: row.tenant_id,
     channel: row.channel,
     externalId: row.external_id,
     agentId: row.agent_id,
     funnelId: row.funnel_id ?? undefined,
-    accessToken: row.access_token ?? undefined,
+    accessToken,
   };
 }
 
