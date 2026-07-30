@@ -1,4 +1,4 @@
-import { DomainError, Event, Identity, Session } from "@/domain";
+import { Decision, DomainError, Event, Identity, Session } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import {
@@ -23,6 +23,13 @@ const MESSAGE_EVENT_TYPES: Record<string, "customer" | "agent"> = {
 
 /** Techo de turnos previos incluidos como memoria conversacional (evita prompts sin límite). */
 const HISTORY_LIMIT = 20;
+
+/** Primera transferKeyword del Agent que aparece (case-insensitive) en el texto del Event, o null. */
+function matchTransferKeyword(event: Event, keywords: readonly string[]): string | null {
+  const text = typeof event.payload.text === "string" ? event.payload.text.toLowerCase() : "";
+  if (!text) return null;
+  return keywords.find((k) => k.trim() && text.includes(k.trim().toLowerCase())) ?? null;
+}
 
 /**
  * MakeDecision — núcleo del comportamiento (SSOT Cap. 11 §6–8).
@@ -79,6 +86,42 @@ export class MakeDecision {
 
     const history = await this.buildHistory(session, event.id);
 
+    // Transferencia a operador (business-rule, sin motor de razonamiento) —
+    // hallazgo de auditoría (item 10): transferKeywords se guardaba en el
+    // Agent pero el runtime nunca lo leía. Coincidencia case-insensitive
+    // contra el texto del Event; reutiliza operatorControl (ya establecido
+    // por SetOperatorControl/HandleInboundMessage) en vez de inventar un
+    // mecanismo de hand-off nuevo.
+    const matchedKeyword = matchTransferKeyword(event, agent.transferKeywords);
+    if (matchedKeyword) {
+      await this.sessions.save(session.withOperatorControl(true));
+      const decision = Decision.create(this.ids.next(), {
+        sessionId: session.id,
+        eventId: event.id,
+        source: "business-rule",
+        rationale: `Transferencia a operador: palabra clave "${matchedKeyword}" detectada`,
+        actions: [],
+      });
+      await this.decisions.save(decision);
+      return { decisionId: decision.id.toString() };
+    }
+
+    // Mensaje de bienvenida determinista en el primer turno de la
+    // Conversation — mismo hallazgo (welcomeMessage sin leer). `history`
+    // vacío significa que no hubo turnos previos en ninguna Session de la
+    // Conversation: es el primer contacto del cliente.
+    if (history.length === 0 && agent.welcomeMessage) {
+      const decision = Decision.create(this.ids.next(), {
+        sessionId: session.id,
+        eventId: event.id,
+        source: "business-rule",
+        rationale: "Primer turno de la Conversation: mensaje de bienvenida configurado",
+        actions: [{ type: "message.send", params: { text: agent.welcomeMessage } }],
+      });
+      await this.decisions.save(decision);
+      return { decisionId: decision.id.toString() };
+    }
+
     // Construcción del Context efímero (SSOT Cap. 11 §6).
     const context: ExecutionContext = {
       event,
@@ -101,8 +144,7 @@ export class MakeDecision {
       // Hallazgo de auditoría (item 10): un fallo del Reasoning Provider no
       // debe perder el mensaje sin dejar rastro. Se deja un Event consultable
       // en el mismo log que ya usa ListConversationMessages/buildHistory
-      // (AA-01 — sin tabla nueva), y se relanza para preservar el contrato
-      // existente (el caller decide cómo responder al fallo).
+      // (AA-01 — sin tabla nueva).
       await this.events.append(
         Event.create(this.ids.next(), {
           sessionId: session.id,
@@ -115,7 +157,22 @@ export class MakeDecision {
           },
         }),
       );
-      throw error;
+      // fallbackMessage configurado (mismo hallazgo que welcomeMessage/
+      // transferKeywords): el cliente recibe una respuesta en vez de silencio
+      // total. Sin fallbackMessage, se preserva el comportamiento previo
+      // (relanzar — el caller decide cómo responder al fallo).
+      if (!agent.fallbackMessage) {
+        throw error;
+      }
+      decision = Decision.create(this.ids.next(), {
+        sessionId: session.id,
+        eventId: event.id,
+        source: "business-rule",
+        rationale: `Reasoning Provider falló, se usa fallbackMessage configurado: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        actions: [{ type: "message.send", params: { text: agent.fallbackMessage } }],
+      });
     }
 
     if (!decision.eventId.equals(event.id)) {

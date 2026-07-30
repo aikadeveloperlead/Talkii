@@ -299,4 +299,212 @@ describe("Modelo de Ejecución end-to-end (SSOT Cap. 11)", () => {
       error: "timeout del proveedor",
     });
   });
+
+  it("MakeDecision transfiere a operador sin llamar al Reasoning Provider cuando el texto contiene una transferKeyword del Agent (item 10)", async () => {
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    const { eventId } = await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "quiero hablar con un asesor humano" },
+    });
+
+    const agent = Agent.create(ids.next(), {
+      tenantId: Identity.of("t1"),
+      name: "Ventas",
+      objective: "calificar leads",
+      permanentPrompt: "eres un asistente de ventas",
+      policies: [],
+      reasoningProfile: "sales-default",
+      transferKeywords: ["asesor", "humano"],
+    });
+    await agents.save(agent);
+
+    const engine = new StubDecisionEngine(ids);
+    const makeDecision = new MakeDecision(
+      engine,
+      events,
+      sessions,
+      agents,
+      funnels,
+      decisions,
+      ids,
+      clock,
+    );
+
+    const { decisionId } = await makeDecision.execute({
+      eventId,
+      agentId: agent.id.toString(),
+    });
+
+    expect(engine.lastContext).toBeUndefined();
+    const stored = [...decisions.store.values()].find((d) => d.id.toString() === decisionId);
+    expect(stored?.source).toBe("business-rule");
+    expect(stored?.actions).toEqual([]);
+    const updatedSession = await sessions.findById(Identity.of(sessionId));
+    expect(updatedSession?.operatorControl).toBe(true);
+  });
+
+  it("MakeDecision responde con welcomeMessage sin llamar al Reasoning Provider en el primer turno de la Conversation (item 10)", async () => {
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    const { eventId } = await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "hola" },
+    });
+
+    const agent = Agent.create(ids.next(), {
+      tenantId: Identity.of("t1"),
+      name: "Ventas",
+      objective: "calificar leads",
+      permanentPrompt: "eres un asistente de ventas",
+      policies: [],
+      reasoningProfile: "sales-default",
+      welcomeMessage: "¡Hola! Bienvenido a Talkii, ¿en qué te ayudo?",
+    });
+    await agents.save(agent);
+
+    const engine = new StubDecisionEngine(ids);
+    const makeDecision = new MakeDecision(
+      engine,
+      events,
+      sessions,
+      agents,
+      funnels,
+      decisions,
+      ids,
+      clock,
+    );
+
+    const { decisionId } = await makeDecision.execute({
+      eventId,
+      agentId: agent.id.toString(),
+    });
+
+    expect(engine.lastContext).toBeUndefined();
+    const stored = [...decisions.store.values()].find((d) => d.id.toString() === decisionId);
+    expect(stored?.source).toBe("business-rule");
+    expect(stored?.actions).toEqual([
+      { type: "message.send", params: { text: agent.welcomeMessage } },
+    ]);
+  });
+
+  it("MakeDecision NO usa welcomeMessage en turnos posteriores al primero, aunque esté configurado (item 10, guarda de regresión)", async () => {
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "hola" },
+    });
+    await ingest.execute({
+      sessionId,
+      type: "message.sent",
+      payload: { text: "¡Hola! Bienvenido a Talkii" },
+    });
+    const { eventId: secondEventId } = await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "quiero precios" },
+    });
+
+    const agent = Agent.create(ids.next(), {
+      tenantId: Identity.of("t1"),
+      name: "Ventas",
+      objective: "calificar leads",
+      permanentPrompt: "eres un asistente de ventas",
+      policies: [],
+      reasoningProfile: "sales-default",
+      welcomeMessage: "¡Hola! Bienvenido a Talkii",
+    });
+    await agents.save(agent);
+
+    const engine = new StubDecisionEngine(ids);
+    const makeDecision = new MakeDecision(
+      engine,
+      events,
+      sessions,
+      agents,
+      funnels,
+      decisions,
+      ids,
+      clock,
+    );
+
+    await makeDecision.execute({ eventId: secondEventId, agentId: agent.id.toString() });
+
+    expect(engine.lastContext).toBeDefined();
+  });
+
+  it("MakeDecision usa fallbackMessage del Agent cuando el Reasoning Provider falla, en vez de dejar al cliente sin respuesta (item 10)", async () => {
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    const { eventId } = await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "hola" },
+    });
+
+    const agent = Agent.create(ids.next(), {
+      tenantId: Identity.of("t1"),
+      name: "Ventas",
+      objective: "calificar leads",
+      permanentPrompt: "eres un asistente de ventas",
+      policies: [],
+      reasoningProfile: "sales-default",
+      fallbackMessage: "Estamos con dificultades técnicas, un asesor te contactará pronto.",
+    });
+    await agents.save(agent);
+
+    const engine = new FailingDecisionEngine(new Error("timeout del proveedor"));
+    const makeDecision = new MakeDecision(
+      engine,
+      events,
+      sessions,
+      agents,
+      funnels,
+      decisions,
+      ids,
+      clock,
+    );
+
+    const { decisionId } = await makeDecision.execute({
+      eventId,
+      agentId: agent.id.toString(),
+    });
+
+    const stored = [...decisions.store.values()].find((d) => d.id.toString() === decisionId);
+    expect(stored?.source).toBe("business-rule");
+    expect(stored?.actions).toEqual([
+      { type: "message.send", params: { text: agent.fallbackMessage } },
+    ]);
+    // El Event de trazabilidad del fallo se sigue dejando (no se pierde la evidencia).
+    const sessionEvents = await events.findBySession(Identity.of(sessionId));
+    expect(sessionEvents.some((e) => e.type === "reasoning.failed")).toBe(true);
+  });
 });
