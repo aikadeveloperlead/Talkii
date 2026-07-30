@@ -23,6 +23,18 @@ function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
 
+/**
+ * Quita los caracteres con significado estructural en el mini-lenguaje de
+ * filtros de PostgREST (`,` separa condiciones, `(`/`)` las agrupa) de un
+ * término de búsqueda antes de interpolarlo en `.or()` — evita que el
+ * usuario inyecte predicados extra sobre columnas no intencionadas (hallazgo
+ * MEDIO de auditoría). `%`/`_` (wildcards de ILIKE) se dejan intactos: solo
+ * amplían el propio match, no rompen la estructura del filtro.
+ */
+function sanitizePostgrestOrValue(value: string): string {
+  return value.replace(/[,()]/g, "");
+}
+
 export class SupabaseCustomerRepository implements CustomerRepository {
   constructor(private readonly db: SupabaseClient) {}
 
@@ -65,7 +77,7 @@ export class SupabaseCustomerRepository implements CustomerRepository {
 
     if (!filters.includeArchived) query = query.is("archived_at", null);
     if (filters.query) {
-      const q = filters.query;
+      const q = sanitizePostgrestOrValue(filters.query);
       query = query.or(
         `first_name.ilike.%${q}%,last_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`,
       );
