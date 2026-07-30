@@ -11,6 +11,7 @@ import {
   Funnel,
   Identity,
   Lead,
+  Preferences,
   Session,
   Tenant,
   WhatsAppTemplate,
@@ -297,6 +298,32 @@ describe("CustomerTimelineEntry (SCR-003)", () => {
         payload: {},
         occurredAt: new Date(),
       }),
+    ).toThrow(DomainError);
+  });
+});
+
+describe("Preferences (SCR-012 §5.5)", () => {
+  it("rechaza language vacío", () => {
+    expect(() =>
+      Preferences.create(id("p1"), { tenantId: id("t1"), language: "" }),
+    ).toThrow(DomainError);
+  });
+
+  it("rechaza timezone vacío", () => {
+    expect(() =>
+      Preferences.create(id("p1"), { tenantId: id("t1"), timezone: "  " }),
+    ).toThrow(DomainError);
+  });
+
+  it("rechaza currency vacío", () => {
+    expect(() =>
+      Preferences.create(id("p1"), { tenantId: id("t1"), currency: "" }),
+    ).toThrow(DomainError);
+  });
+
+  it("rechaza dateFormat vacío", () => {
+    expect(() =>
+      Preferences.create(id("p1"), { tenantId: id("t1"), dateFormat: "" }),
     ).toThrow(DomainError);
   });
 });

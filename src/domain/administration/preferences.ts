@@ -1,4 +1,4 @@
-import { Entity, Identity } from "../shared";
+import { Entity, Identity, invariant } from "../shared";
 
 /** Preferences — preferencias globales del Tenant (SCR-012 §5.5, 1:1 con Tenant). */
 export interface PreferencesProps {
@@ -31,7 +31,12 @@ export class Preferences extends Entity {
     const defined = Object.fromEntries(
       Object.entries(props).filter(([, value]) => value !== undefined),
     ) as Partial<PreferencesProps> & { tenantId: Identity };
-    return new Preferences(id, { ...DEFAULTS, ...defined });
+    const merged = { ...DEFAULTS, ...defined };
+    invariant(merged.language.trim().length > 0, "Preferences: language no puede estar vacío");
+    invariant(merged.timezone.trim().length > 0, "Preferences: timezone no puede estar vacío");
+    invariant(merged.currency.trim().length > 0, "Preferences: currency no puede estar vacío");
+    invariant(merged.dateFormat.trim().length > 0, "Preferences: dateFormat no puede estar vacío");
+    return new Preferences(id, merged);
   }
 
   get tenantId(): Identity {
