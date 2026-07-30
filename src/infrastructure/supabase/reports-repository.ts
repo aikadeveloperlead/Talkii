@@ -32,14 +32,14 @@ export class SupabaseReportsRepository implements ReportsRepository {
     const [conversationCount, activeSessionCount, customerCount, appointmentCount, leadCount, wonLeadCount] =
       await Promise.all([
         count(
-          () => this.db.from("conversations").select("*", { count: "exact", head: true }).eq("tenant_id", tid),
+          () => this.db.from("conversations").select("id", { count: "exact", head: true }).eq("tenant_id", tid),
           "conversations.count",
         ),
         count(
           () =>
             this.db
               .from("sessions")
-              .select("*, conversations!inner(tenant_id)", { count: "exact", head: true })
+              .select("id, conversations!inner(tenant_id)", { count: "exact", head: true })
               .eq("status", "active")
               .eq("conversations.tenant_id", tid),
           "sessions.count",
@@ -48,7 +48,7 @@ export class SupabaseReportsRepository implements ReportsRepository {
           () =>
             this.db
               .from("customers")
-              .select("*", { count: "exact", head: true })
+              .select("id", { count: "exact", head: true })
               .eq("tenant_id", tid)
               .is("archived_at", null),
           "customers.count",
@@ -57,7 +57,7 @@ export class SupabaseReportsRepository implements ReportsRepository {
           () =>
             this.db
               .from("appointments")
-              .select("*", { count: "exact", head: true })
+              .select("id", { count: "exact", head: true })
               .eq("tenant_id", tid)
               .is("deleted_at", null),
           "appointments.count",
@@ -66,7 +66,7 @@ export class SupabaseReportsRepository implements ReportsRepository {
           () =>
             this.db
               .from("leads")
-              .select("*, customers!inner(tenant_id)", { count: "exact", head: true })
+              .select("id, customers!inner(tenant_id)", { count: "exact", head: true })
               .eq("customers.tenant_id", tid),
           "leads.count",
         ),
@@ -74,7 +74,7 @@ export class SupabaseReportsRepository implements ReportsRepository {
           () =>
             this.db
               .from("leads")
-              .select("*, customers!inner(tenant_id)", { count: "exact", head: true })
+              .select("id, customers!inner(tenant_id)", { count: "exact", head: true })
               .eq("customers.tenant_id", tid)
               .eq("status", "won"),
           "leads.count",
@@ -133,7 +133,7 @@ export class SupabaseReportsRepository implements ReportsRepository {
     const tid = tenantId.toString();
     const [total, activeSessions] = await Promise.all([
       count(
-        () => this.db.from("conversations").select("*", { count: "exact", head: true }).eq("tenant_id", tid),
+        () => this.db.from("conversations").select("id", { count: "exact", head: true }).eq("tenant_id", tid),
         "conversations.count",
       ),
       count(

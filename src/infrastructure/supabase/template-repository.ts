@@ -7,6 +7,10 @@ function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
 
+/** Item BAJO #21 de la auditoría: columnas explícitas en vez de select("*"). */
+const TEMPLATE_COLUMNS =
+  "id,tenant_id,name,language,category,header_type,header_content,body,footer,buttons,status,quality_rating,version,archived_at";
+
 export class SupabaseTemplateRepository implements TemplateRepository {
   constructor(private readonly db: SupabaseClient) {}
 
@@ -18,7 +22,7 @@ export class SupabaseTemplateRepository implements TemplateRepository {
   async findById(id: Identity): Promise<WhatsAppTemplate | null> {
     const { data, error } = await this.db
       .from("whatsapp_templates")
-      .select("*")
+      .select(TEMPLATE_COLUMNS)
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("whatsapp_templates.select", error);
@@ -26,7 +30,10 @@ export class SupabaseTemplateRepository implements TemplateRepository {
   }
 
   async listByTenant(tenantId: Identity, includeArchived = false): Promise<WhatsAppTemplate[]> {
-    let query = this.db.from("whatsapp_templates").select("*").eq("tenant_id", tenantId.toString());
+    let query = this.db
+      .from("whatsapp_templates")
+      .select(TEMPLATE_COLUMNS)
+      .eq("tenant_id", tenantId.toString());
     if (!includeArchived) query = query.is("archived_at", null);
     const { data, error } = await query.order("created_at", { ascending: false });
     if (error) fail("whatsapp_templates.select", error);

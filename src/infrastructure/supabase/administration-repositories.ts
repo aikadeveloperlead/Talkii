@@ -25,7 +25,7 @@ export class SupabaseCompanyRepository implements CompanyRepository {
   async findByTenant(tenantId: Identity): Promise<Company | null> {
     const { data, error } = await this.db
       .from("companies")
-      .select("*")
+      .select("id,tenant_id,business_name,legal_name,tax_id,email,phone,website")
       .eq("tenant_id", tenantId.toString())
       .maybeSingle();
     if (error) fail("companies.select", error);
@@ -44,7 +44,7 @@ export class SupabasePreferencesRepository implements PreferencesRepository {
   async findByTenant(tenantId: Identity): Promise<Preferences | null> {
     const { data, error } = await this.db
       .from("preferences")
-      .select("*")
+      .select("id,tenant_id,language,timezone,currency,date_format")
       .eq("tenant_id", tenantId.toString())
       .maybeSingle();
     if (error) fail("preferences.select", error);

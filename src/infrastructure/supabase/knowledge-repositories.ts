@@ -18,6 +18,10 @@ function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
 
+/** Item BAJO #21 de la auditoría: columnas explícitas en vez de select("*"). */
+const KNOWLEDGE_COLUMNS =
+  "id,tenant_id,title,category_id,content,source_type,source_file,status,is_active";
+
 export class SupabaseCategoryRepository implements CategoryRepository {
   constructor(private readonly db: SupabaseClient) {}
 
@@ -29,7 +33,7 @@ export class SupabaseCategoryRepository implements CategoryRepository {
   async findById(id: Identity): Promise<Category | null> {
     const { data, error } = await this.db
       .from("knowledge_categories")
-      .select("*")
+      .select("id,tenant_id,name,color")
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("knowledge_categories.select", error);
@@ -39,7 +43,7 @@ export class SupabaseCategoryRepository implements CategoryRepository {
   async listByTenant(tenantId: Identity): Promise<Category[]> {
     const { data, error } = await this.db
       .from("knowledge_categories")
-      .select("*")
+      .select("id,tenant_id,name,color")
       .eq("tenant_id", tenantId.toString())
       .order("created_at", { ascending: true });
     if (error) fail("knowledge_categories.select", error);
@@ -63,7 +67,7 @@ export class SupabaseKnowledgeRepository implements KnowledgeRepository {
   async findById(id: Identity): Promise<KnowledgeDocument | null> {
     const { data, error } = await this.db
       .from("knowledge_documents")
-      .select("*")
+      .select(KNOWLEDGE_COLUMNS)
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("knowledge_documents.select", error);
@@ -71,7 +75,10 @@ export class SupabaseKnowledgeRepository implements KnowledgeRepository {
   }
 
   async listByTenant(tenantId: Identity, includeArchived = false): Promise<KnowledgeDocument[]> {
-    let query = this.db.from("knowledge_documents").select("*").eq("tenant_id", tenantId.toString());
+    let query = this.db
+      .from("knowledge_documents")
+      .select(KNOWLEDGE_COLUMNS)
+      .eq("tenant_id", tenantId.toString());
     if (!includeArchived) query = query.neq("status", "archived");
     const { data, error } = await query.order("created_at", { ascending: false });
     if (error) fail("knowledge_documents.select", error);

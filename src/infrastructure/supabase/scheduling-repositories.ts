@@ -22,6 +22,12 @@ function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
 
+/** Item BAJO #21 de la auditoría: columnas explícitas en vez de select("*"). */
+const CALENDAR_COLUMNS = "id,tenant_id,name,timezone,color,is_default";
+const APPOINTMENT_COLUMNS =
+  "id,tenant_id,calendar_id,customer_id,conversation_id,title,description,status,timezone,starts_at,ends_at,deleted_at";
+const APPOINTMENT_TIMELINE_COLUMNS = "id,appointment_id,type,payload,occurred_at";
+
 export class SupabaseCalendarRepository implements CalendarRepository {
   constructor(private readonly db: SupabaseClient) {}
 
@@ -33,7 +39,7 @@ export class SupabaseCalendarRepository implements CalendarRepository {
   async findById(id: Identity): Promise<Calendar | null> {
     const { data, error } = await this.db
       .from("calendars")
-      .select("*")
+      .select(CALENDAR_COLUMNS)
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("calendars.select", error);
@@ -43,7 +49,7 @@ export class SupabaseCalendarRepository implements CalendarRepository {
   async listByTenant(tenantId: Identity): Promise<Calendar[]> {
     const { data, error } = await this.db
       .from("calendars")
-      .select("*")
+      .select(CALENDAR_COLUMNS)
       .eq("tenant_id", tenantId.toString())
       .order("created_at", { ascending: true });
     if (error) fail("calendars.select", error);
@@ -72,7 +78,7 @@ export class SupabaseAppointmentRepository implements AppointmentRepository {
   async findById(id: Identity): Promise<Appointment | null> {
     const { data, error } = await this.db
       .from("appointments")
-      .select("*")
+      .select(APPOINTMENT_COLUMNS)
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("appointments.select", error);
@@ -87,7 +93,7 @@ export class SupabaseAppointmentRepository implements AppointmentRepository {
   ): Promise<Appointment[]> {
     let query = this.db
       .from("appointments")
-      .select("*")
+      .select(APPOINTMENT_COLUMNS)
       .eq("calendar_id", calendarId.toString())
       .is("deleted_at", null)
       .neq("status", "cancelled")
@@ -108,7 +114,7 @@ export class SupabaseAppointmentRepository implements AppointmentRepository {
   ): Promise<{ items: Appointment[]; total: number }> {
     let query = this.db
       .from("appointments")
-      .select("*", { count: "exact" })
+      .select(APPOINTMENT_COLUMNS, { count: "exact" })
       .eq("tenant_id", tenantId.toString())
       .is("deleted_at", null);
 
@@ -141,7 +147,7 @@ export class SupabaseAppointmentTimelineRepository implements AppointmentTimelin
   async findByAppointment(appointmentId: Identity): Promise<AppointmentTimelineEntry[]> {
     const { data, error } = await this.db
       .from("appointment_timeline")
-      .select("*")
+      .select(APPOINTMENT_TIMELINE_COLUMNS)
       .eq("appointment_id", appointmentId.toString())
       .order("occurred_at", { ascending: true });
     if (error) fail("appointment_timeline.select", error);

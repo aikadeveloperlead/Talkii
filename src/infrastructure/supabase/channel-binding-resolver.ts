@@ -44,7 +44,7 @@ export class SupabaseChannelBindingResolver implements ChannelBindingResolver {
   ): Promise<ChannelBinding | null> {
     const { data, error } = await this.db
       .from("channel_bindings")
-      .select("*")
+      .select("id,tenant_id,channel,external_id,agent_id,funnel_id,access_token")
       .eq("channel", channel)
       .eq("external_id", externalId)
       .maybeSingle();
@@ -60,7 +60,7 @@ export class SupabaseChannelBindingResolver implements ChannelBindingResolver {
   ): Promise<ChannelBinding | null> {
     const { data, error } = await this.db
       .from("channel_bindings")
-      .select("*")
+      .select("id,tenant_id,channel,external_id,agent_id,funnel_id,access_token")
       .eq("tenant_id", tenantId)
       .eq("channel", channel)
       .limit(1)

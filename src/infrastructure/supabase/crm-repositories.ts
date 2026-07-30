@@ -23,6 +23,12 @@ function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
 
+/** Item BAJO #21 de la auditoría: columnas explícitas en vez de select("*"). */
+const CUSTOMER_COLUMNS =
+  "id,tenant_id,first_name,last_name,phone,email,company,position,city,country,tags,archived_at";
+const LEAD_COLUMNS = "id,customer_id,status,score,priority,owner_id";
+const CUSTOMER_TIMELINE_COLUMNS = "id,customer_id,type,payload,occurred_at";
+
 /** Fila de customers tal como la devuelve `search` — incluye `created_at`, que `CustomerRow` no expone (no es parte del dominio, solo del cursor de paginación). */
 type CustomerSearchRow = CustomerRow & { created_at: string };
 
@@ -63,7 +69,7 @@ export class SupabaseCustomerRepository implements CustomerRepository {
   async findById(id: Identity): Promise<Customer | null> {
     const { data, error } = await this.db
       .from("customers")
-      .select("*")
+      .select(CUSTOMER_COLUMNS)
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("customers.select", error);
@@ -73,7 +79,7 @@ export class SupabaseCustomerRepository implements CustomerRepository {
   async findByPhone(tenantId: Identity, phone: string): Promise<Customer | null> {
     const { data, error } = await this.db
       .from("customers")
-      .select("*")
+      .select(CUSTOMER_COLUMNS)
       .eq("tenant_id", tenantId.toString())
       .eq("phone", phone)
       .maybeSingle();
@@ -96,7 +102,7 @@ export class SupabaseCustomerRepository implements CustomerRepository {
   ): Promise<CustomerSearchResult> {
     let query = this.db
       .from("customers")
-      .select("*")
+      .select(`${CUSTOMER_COLUMNS},created_at`)
       .eq("tenant_id", tenantId.toString());
 
     if (!filters.includeArchived) query = query.is("archived_at", null);
@@ -148,7 +154,7 @@ export class SupabaseLeadRepository implements LeadRepository {
   async findByCustomerId(customerId: Identity): Promise<Lead | null> {
     const { data, error } = await this.db
       .from("leads")
-      .select("*")
+      .select(LEAD_COLUMNS)
       .eq("customer_id", customerId.toString())
       .maybeSingle();
     if (error) fail("leads.select", error);
@@ -169,7 +175,7 @@ export class SupabaseCustomerTimelineRepository implements CustomerTimelineRepos
   async findByCustomer(customerId: Identity): Promise<CustomerTimelineEntry[]> {
     const { data, error } = await this.db
       .from("customer_timeline")
-      .select("*")
+      .select(CUSTOMER_TIMELINE_COLUMNS)
       .eq("customer_id", customerId.toString())
       .order("occurred_at", { ascending: true });
     if (error) fail("customer_timeline.select", error);

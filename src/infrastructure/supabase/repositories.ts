@@ -70,7 +70,7 @@ export class SupabaseTenantRepository implements TenantRepository {
   async findById(id: Identity): Promise<Tenant | null> {
     const { data, error } = await this.db
       .from("tenants")
-      .select("*")
+      .select("id,name,description,logo,status")
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("tenants.select", error);
@@ -89,7 +89,9 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findById(id: Identity): Promise<Agent | null> {
     const { data, error } = await this.db
       .from("agents")
-      .select("*")
+      .select(
+        "id,tenant_id,name,objective,permanent_prompt,policies,reasoning_profile,status,role,personality,language,tone,business_name,business_description,products_services,business_type,welcome_message,fallback_message,transfer_keywords,capture_fields,funnel_id",
+      )
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("agents.select", error);
@@ -99,7 +101,9 @@ export class SupabaseAgentRepository implements AgentRepository {
   async findByName(tenantId: Identity, name: string): Promise<Agent | null> {
     const { data, error } = await this.db
       .from("agents")
-      .select("*")
+      .select(
+        "id,tenant_id,name,objective,permanent_prompt,policies,reasoning_profile,status,role,personality,language,tone,business_name,business_description,products_services,business_type,welcome_message,fallback_message,transfer_keywords,capture_fields,funnel_id",
+      )
       .eq("tenant_id", tenantId.toString())
       .eq("name", name)
       .maybeSingle();
@@ -110,7 +114,9 @@ export class SupabaseAgentRepository implements AgentRepository {
   async listByTenant(tenantId: Identity): Promise<Agent[]> {
     const { data, error } = await this.db
       .from("agents")
-      .select("*")
+      .select(
+        "id,tenant_id,name,objective,permanent_prompt,policies,reasoning_profile,status,role,personality,language,tone,business_name,business_description,products_services,business_type,welcome_message,fallback_message,transfer_keywords,capture_fields,funnel_id",
+      )
       .eq("tenant_id", tenantId.toString())
       .order("created_at", { ascending: true });
     if (error) fail("agents.select", error);
@@ -129,7 +135,7 @@ export class SupabaseFunnelRepository implements FunnelRepository {
   async findById(id: Identity): Promise<Funnel | null> {
     const { data, error } = await this.db
       .from("funnels")
-      .select("*")
+      .select("id,tenant_id,name,stages,description,ads_attribution,status")
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("funnels.select", error);
@@ -139,7 +145,7 @@ export class SupabaseFunnelRepository implements FunnelRepository {
   async findByName(tenantId: Identity, name: string): Promise<Funnel | null> {
     const { data, error } = await this.db
       .from("funnels")
-      .select("*")
+      .select("id,tenant_id,name,stages,description,ads_attribution,status")
       .eq("tenant_id", tenantId.toString())
       .eq("name", name)
       .maybeSingle();
@@ -150,7 +156,7 @@ export class SupabaseFunnelRepository implements FunnelRepository {
   async listByTenant(tenantId: Identity): Promise<Funnel[]> {
     const { data, error } = await this.db
       .from("funnels")
-      .select("*")
+      .select("id,tenant_id,name,stages,description,ads_attribution,status")
       .eq("tenant_id", tenantId.toString())
       .order("created_at", { ascending: true });
     if (error) fail("funnels.select", error);
@@ -171,7 +177,7 @@ export class SupabaseConversationRepository implements ConversationRepository {
   async findById(id: Identity): Promise<Conversation | null> {
     const { data, error } = await this.db
       .from("conversations")
-      .select("*")
+      .select("id,tenant_id,channel,participants")
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("conversations.select", error);
@@ -185,7 +191,7 @@ export class SupabaseConversationRepository implements ConversationRepository {
   ): Promise<Conversation | null> {
     const { data, error } = await this.db
       .from("conversations")
-      .select("*")
+      .select("id,tenant_id,channel,participants")
       .eq("tenant_id", tenantId.toString())
       .eq("channel", channel)
       .contains("participants", JSON.stringify([{ channelHandle: handle }]))
@@ -217,7 +223,7 @@ export class SupabaseSessionRepository implements SessionRepository {
   async findById(id: Identity): Promise<Session | null> {
     const { data, error } = await this.db
       .from("sessions")
-      .select("*")
+      .select("id,conversation_id,status,dimensions")
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("sessions.select", error);
@@ -229,7 +235,7 @@ export class SupabaseSessionRepository implements SessionRepository {
   ): Promise<Session | null> {
     const { data, error } = await this.db
       .from("sessions")
-      .select("*")
+      .select("id,conversation_id,status,dimensions")
       .eq("conversation_id", conversationId.toString())
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -242,7 +248,7 @@ export class SupabaseSessionRepository implements SessionRepository {
   async findAllByConversation(conversationId: Identity): Promise<Session[]> {
     const { data, error } = await this.db
       .from("sessions")
-      .select("*")
+      .select("id,conversation_id,status,dimensions")
       .eq("conversation_id", conversationId.toString())
       .order("created_at", { ascending: true });
     if (error) fail("sessions.select", error);
@@ -268,7 +274,7 @@ export class SupabaseEventRepository implements EventRepository {
   async findById(id: Identity): Promise<Event | null> {
     const { data, error } = await this.db
       .from("events")
-      .select("*")
+      .select("id,session_id,type,occurred_at,payload,external_id")
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("events.select", error);
@@ -278,7 +284,7 @@ export class SupabaseEventRepository implements EventRepository {
   async findBySession(sessionId: Identity): Promise<Event[]> {
     const { data, error } = await this.db
       .from("events")
-      .select("*")
+      .select("id,session_id,type,occurred_at,payload,external_id")
       .eq("session_id", sessionId.toString())
       .order("occurred_at", { ascending: true });
     if (error) fail("events.select", error);
@@ -289,7 +295,7 @@ export class SupabaseEventRepository implements EventRepository {
     if (sessionIds.length === 0) return [];
     const { data, error } = await this.db
       .from("events")
-      .select("*")
+      .select("id,session_id,type,occurred_at,payload,external_id")
       .in("session_id", sessionIds.map((id) => id.toString()))
       .order("occurred_at", { ascending: true });
     if (error) fail("events.select", error);
@@ -310,7 +316,7 @@ export class SupabaseDecisionRepository implements DecisionRepository {
   async findById(id: Identity): Promise<Decision | null> {
     const { data, error } = await this.db
       .from("decisions")
-      .select("*")
+      .select("id,session_id,event_id,source,rationale,actions")
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("decisions.select", error);
@@ -320,7 +326,7 @@ export class SupabaseDecisionRepository implements DecisionRepository {
   async findBySession(sessionId: Identity): Promise<Decision[]> {
     const { data, error } = await this.db
       .from("decisions")
-      .select("*")
+      .select("id,session_id,event_id,source,rationale,actions")
       .eq("session_id", sessionId.toString());
     if (error) fail("decisions.select", error);
     return (data as DecisionRow[]).map(rowToDecision);

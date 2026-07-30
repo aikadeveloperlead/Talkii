@@ -14,6 +14,11 @@ function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
 
+/** Item BAJO #21 de la auditoría: columnas explícitas en vez de select("*"). */
+const WEBHOOK_COLUMNS = "id,tenant_id,name,url,secret,events,status";
+const WEBHOOK_DELIVERY_COLUMNS =
+  "id,webhook_id,event_name,payload,status,response_status,response_time_ms,error_detail,occurred_at";
+
 export class SupabaseWebhookRepository implements WebhookRepository {
   constructor(private readonly db: SupabaseClient) {}
 
@@ -25,7 +30,7 @@ export class SupabaseWebhookRepository implements WebhookRepository {
   async findById(id: Identity): Promise<Webhook | null> {
     const { data, error } = await this.db
       .from("webhooks")
-      .select("*")
+      .select(WEBHOOK_COLUMNS)
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("webhooks.select", error);
@@ -35,7 +40,7 @@ export class SupabaseWebhookRepository implements WebhookRepository {
   async listByTenant(tenantId: Identity): Promise<Webhook[]> {
     const { data, error } = await this.db
       .from("webhooks")
-      .select("*")
+      .select(WEBHOOK_COLUMNS)
       .eq("tenant_id", tenantId.toString())
       .order("created_at", { ascending: true });
     if (error) fail("webhooks.select", error);
@@ -45,7 +50,7 @@ export class SupabaseWebhookRepository implements WebhookRepository {
   async findActiveByEvent(tenantId: Identity, eventName: string): Promise<Webhook[]> {
     const { data, error } = await this.db
       .from("webhooks")
-      .select("*")
+      .select(WEBHOOK_COLUMNS)
       .eq("tenant_id", tenantId.toString())
       .eq("status", "active")
       .contains("events", [eventName]);
@@ -65,7 +70,7 @@ export class SupabaseWebhookDeliveryRepository implements WebhookDeliveryReposit
   async listByWebhook(webhookId: Identity): Promise<WebhookDelivery[]> {
     const { data, error } = await this.db
       .from("webhook_deliveries")
-      .select("*")
+      .select(WEBHOOK_DELIVERY_COLUMNS)
       .eq("webhook_id", webhookId.toString())
       .order("occurred_at", { ascending: false });
     if (error) fail("webhook_deliveries.select", error);
