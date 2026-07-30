@@ -40,19 +40,17 @@ export class ListConversationMessages {
 
     const sessions = await this.sessions.findAllByConversation(conversation.id);
 
+    const events = await this.events.findBySessions(sessions.map((s) => s.id));
     const messages: ConversationMessageDTO[] = [];
-    for (const session of sessions) {
-      const events = await this.events.findBySession(session.id);
-      for (const event of events) {
-        const sender = MESSAGE_EVENT_TYPES[event.type];
-        if (!sender) continue;
-        messages.push({
-          id: event.id.toString(),
-          sender,
-          text: typeof event.payload.text === "string" ? event.payload.text : "",
-          at: event.occurredAt,
-        });
-      }
+    for (const event of events) {
+      const sender = MESSAGE_EVENT_TYPES[event.type];
+      if (!sender) continue;
+      messages.push({
+        id: event.id.toString(),
+        sender,
+        text: typeof event.payload.text === "string" ? event.payload.text : "",
+        at: event.occurredAt,
+      });
     }
 
     messages.sort((a, b) => a.at.getTime() - b.at.getTime());

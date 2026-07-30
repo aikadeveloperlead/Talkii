@@ -76,6 +76,8 @@ export interface EventRepository {
   append(event: Event): Promise<void>;
   findById(id: Identity): Promise<Event | null>;
   findBySession(sessionId: Identity): Promise<Event[]>;
+  /** Batch: todos los Events de varias Sessions en un único round-trip (evita N+1 al recorrer una Conversation con varias Sessions). */
+  findBySessions(sessionIds: Identity[]): Promise<Event[]>;
 }
 
 export interface DecisionRepository {

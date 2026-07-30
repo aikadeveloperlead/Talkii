@@ -116,17 +116,15 @@ export class MakeDecision {
   ): Promise<ConversationHistoryEntry[]> {
     const sessions = await this.sessions.findAllByConversation(session.conversationId);
 
+    const events = await this.events.findBySessions(sessions.map((s) => s.id));
     const turns: ConversationHistoryEntry[] = [];
-    for (const s of sessions) {
-      const events = await this.events.findBySession(s.id);
-      for (const e of events) {
-        if (e.id.equals(currentEventId)) continue;
-        const sender = MESSAGE_EVENT_TYPES[e.type];
-        if (!sender) continue;
-        const text = typeof e.payload.text === "string" ? e.payload.text : "";
-        if (!text) continue;
-        turns.push({ sender, text, at: e.occurredAt });
-      }
+    for (const e of events) {
+      if (e.id.equals(currentEventId)) continue;
+      const sender = MESSAGE_EVENT_TYPES[e.type];
+      if (!sender) continue;
+      const text = typeof e.payload.text === "string" ? e.payload.text : "";
+      if (!text) continue;
+      turns.push({ sender, text, at: e.occurredAt });
     }
 
     turns.sort((a, b) => a.at.getTime() - b.at.getTime());

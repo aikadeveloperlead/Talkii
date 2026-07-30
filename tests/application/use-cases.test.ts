@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { Agent, DomainError, Identity } from "@/domain";
+import { Agent, DomainError, Identity, Session } from "@/domain";
 import {
   IngestEvent,
   MakeDecision,
@@ -180,5 +180,65 @@ describe("Modelo de Ejecución end-to-end (SSOT Cap. 11)", () => {
       { sender: "customer", text: "hola", at: clock.now() },
       { sender: "agent", text: "¿en qué puedo ayudarte?", at: clock.now() },
     ]);
+  });
+
+  it("MakeDecision.buildHistory trae los Events de todas las Sessions en un único round-trip batched (mismo N+1 que ListConversationMessages, item 8)", async () => {
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId, conversationId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "hola" },
+    });
+
+    // Conversation reabierta: segunda Session sobre la misma Conversation.
+    const secondSession = Session.create(ids.next(), {
+      conversationId: Identity.of(conversationId),
+      dimensions: {
+        state: { status: "active" },
+        memory: {},
+        context: {},
+        timeline: [{ at: clock.now(), kind: "session.started" }],
+        variables: {},
+        metadata: {},
+      },
+    });
+    await sessions.save(secondSession);
+    const { eventId: currentEventId } = await ingest.execute({
+      sessionId: secondSession.id.toString(),
+      type: "message.received",
+      payload: { text: "volví" },
+    });
+
+    const agent = Agent.create(ids.next(), {
+      tenantId: Identity.of("t1"),
+      name: "Ventas",
+      objective: "calificar leads",
+      permanentPrompt: "eres un asistente de ventas",
+      policies: [],
+      reasoningProfile: "sales-default",
+    });
+    await agents.save(agent);
+
+    const engine = new StubDecisionEngine(ids);
+    const makeDecision = new MakeDecision(
+      engine,
+      events,
+      sessions,
+      agents,
+      funnels,
+      decisions,
+    );
+
+    await makeDecision.execute({ eventId: currentEventId, agentId: agent.id.toString() });
+
+    expect(events.findBySessionsCalls).toBe(1);
+    expect(events.findBySessionCalls).toBe(0);
   });
 });

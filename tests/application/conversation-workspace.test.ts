@@ -169,6 +169,54 @@ describe("ListConversationMessages", () => {
     const { listMessages } = setup();
     expect(await listMessages.execute("no-existe")).toBeNull();
   });
+
+  it("trae los Events de todas las Sessions en un único round-trip batched, sin N+1 (item 8 de auditoría)", async () => {
+    const { conversations, sessions, events, ids, clock, listMessages } = setup();
+    const { conversation, session: firstSession } = await seedConversation(
+      conversations,
+      sessions,
+      ids,
+      clock,
+    );
+    // Conversation reabierta: segunda Session sobre la misma Conversation.
+    const secondSession = Session.create(ids.next(), {
+      conversationId: conversation.id,
+      dimensions: {
+        state: { status: "active" },
+        memory: {},
+        context: {},
+        timeline: [{ at: clock.now(), kind: "session.started" }],
+        variables: {},
+        metadata: {},
+      },
+    });
+    await sessions.save(secondSession);
+
+    await events.append(
+      Event.create(ids.next(), {
+        sessionId: firstSession.id,
+        type: "message.received",
+        occurredAt: new Date("2026-07-15T12:00:00.000Z"),
+        payload: { text: "hola" },
+      }),
+    );
+    await events.append(
+      Event.create(ids.next(), {
+        sessionId: secondSession.id,
+        type: "message.received",
+        occurredAt: new Date("2026-07-15T13:00:00.000Z"),
+        payload: { text: "volví" },
+      }),
+    );
+
+    const messages = await listMessages.execute(conversation.id.toString());
+
+    expect(messages).toHaveLength(2);
+    // Un solo round-trip batched a events.findBySessions, sin importar cuántas
+    // Sessions tenga la Conversation — nunca events.findBySession por Session.
+    expect(events.findBySessionsCalls).toBe(1);
+    expect(events.findBySessionCalls).toBe(0);
+  });
 });
 
 describe("SetOperatorControl", () => {

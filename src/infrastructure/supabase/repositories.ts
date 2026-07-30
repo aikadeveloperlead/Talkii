@@ -273,6 +273,17 @@ export class SupabaseEventRepository implements EventRepository {
     if (error) fail("events.select", error);
     return (data as EventRow[]).map(rowToEvent);
   }
+
+  async findBySessions(sessionIds: Identity[]): Promise<Event[]> {
+    if (sessionIds.length === 0) return [];
+    const { data, error } = await this.db
+      .from("events")
+      .select("*")
+      .in("session_id", sessionIds.map((id) => id.toString()))
+      .order("occurred_at", { ascending: true });
+    if (error) fail("events.select", error);
+    return (data as EventRow[]).map(rowToEvent);
+  }
 }
 
 export class SupabaseDecisionRepository implements DecisionRepository {

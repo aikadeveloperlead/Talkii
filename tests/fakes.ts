@@ -174,6 +174,9 @@ export class InMemorySessions implements SessionRepository {
 
 export class InMemoryEvents implements EventRepository {
   private store = new Map<string, Event>();
+  /** Contadores de llamadas — permiten a los tests probar ausencia de N+1. */
+  findBySessionCalls = 0;
+  findBySessionsCalls = 0;
   async append(event: Event): Promise<void> {
     if (
       event.externalId &&
@@ -187,8 +190,15 @@ export class InMemoryEvents implements EventRepository {
     return this.store.get(id.toString()) ?? null;
   }
   async findBySession(sessionId: Identity): Promise<Event[]> {
+    this.findBySessionCalls += 1;
     return [...this.store.values()].filter((e) =>
       e.sessionId.equals(sessionId),
+    );
+  }
+  async findBySessions(sessionIds: Identity[]): Promise<Event[]> {
+    this.findBySessionsCalls += 1;
+    return [...this.store.values()].filter((e) =>
+      sessionIds.some((id) => e.sessionId.equals(id)),
     );
   }
 }
