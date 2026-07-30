@@ -65,7 +65,6 @@ export interface FunnelRow {
   name: string;
   stages: FunnelStage[];
   description: string | null;
-  template_id: string | null;
   ads_attribution: boolean;
   status: string;
 }
@@ -182,7 +181,6 @@ export function funnelToRow(funnel: Funnel): FunnelRow {
     name: funnel.name,
     stages: [...funnel.stages],
     description: funnel.description ?? null,
-    template_id: funnel.templateId?.toString() ?? null,
     ads_attribution: funnel.adsAttribution,
     status: funnel.status,
   };
@@ -193,7 +191,6 @@ export function rowToFunnel(row: FunnelRow): Funnel {
     name: row.name,
     stages: row.stages ?? [],
     description: row.description ?? undefined,
-    templateId: row.template_id ? Identity.of(row.template_id) : undefined,
     adsAttribution: row.ads_attribution,
     status: row.status as Funnel["status"],
   });

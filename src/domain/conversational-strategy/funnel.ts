@@ -31,7 +31,7 @@ export type FunnelStatus = "draft" | "active" | "archived";
  * Decisions y nunca gobierna contexto ni memoria. ÚNICAMENTE describe
  * estrategia — por eso esta entidad no expone métodos de comportamiento.
  *
- * SCR-010 añade description/templateId/adsAttribution/status (opcionales).
+ * SCR-010 añade description/adsAttribution/status (opcionales).
  * Deliberadamente NO incluye ejecución del Funnel, motor de decisión ni el
  * "Workflow genérico de n8n" del spec (n8n removido de la arquitectura de
  * Talkii — el Decision Engine, SSOT Cap. 11, es su reemplazo).
@@ -41,7 +41,6 @@ export interface FunnelProps {
   name: string;
   stages: FunnelStage[];
   description?: string;
-  templateId?: Identity;
   adsAttribution?: boolean;
   status?: FunnelStatus;
 }
@@ -98,10 +97,6 @@ export class Funnel extends Entity {
 
   get description(): string | undefined {
     return this.props.description;
-  }
-
-  get templateId(): Identity | undefined {
-    return this.props.templateId;
   }
 
   get adsAttribution(): boolean {
