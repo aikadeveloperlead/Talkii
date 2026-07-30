@@ -1,0 +1,46 @@
+-- 2 BLOCKERs de la auditoria adversarial santa-loop (2 revisores independientes,
+-- verificados contra el schema real via information_schema.role_table_grants):
+-- Supabase otorga por defecto INSERT/UPDATE/DELETE a `anon`/`authenticated`
+-- sobre TODAS las tablas; ninguna de las 24 migraciones anteriores lo revoco
+-- para `tenants` ni `channel_bindings`. RLS aisla filas por tenant, pero no
+-- restringe la OPERACION: cualquier usuario autenticado podia, via PostgREST
+-- directo (anon key + su propio JWT, mismo camino que usa el cliente
+-- server-side por-request de la app), bypassear las reglas de negocio de
+-- Next.js:
+--
+--   1. DELETE /rest/v1/tenants?id=eq.<propio> — la policy `tenants_isolation`
+--      (0011) solo valida `tenant_id = current_tenant_id()`, no la operacion;
+--      con el grant de DELETE presente, cualquier usuario borra su propio
+--      Tenant y todo lo que cuelga de el via ON DELETE CASCADE, pese a que el
+--      diseño del producto es soft-delete en todas partes (archived_at/
+--      deleted_at/status). Verificado: TenantRepository no tiene metodo
+--      delete(); no existe ningun flujo legitimo que necesite este permiso.
+--
+--   2. INSERT /rest/v1/channel_bindings con tenant_id propio (unica columna
+--      que la policy valida) pero external_id de OTRO tenant (phone_number_id
+--      de Meta, no es secreto) — el webhook de WhatsApp resuelve el binding
+--      solo por (channel, external_id) bajo un cliente service-role que
+--      salta RLS, permitiendo secuestrar el trafico entrante de WhatsApp de
+--      otro tenant. Verificado: SupabaseChannelBindingResolver no expone
+--      ningun metodo de escritura (solo findByChannelIdentity/findByTenant);
+--      no existe ningun caso de uso que cree o modifique channel_bindings.
+--
+-- Ambos permisos (INSERT/DELETE en tenants; INSERT/UPDATE/DELETE en
+-- channel_bindings) no los usa NINGUN camino legitimo de la app via el
+-- cliente por-request (`authenticated`): ProvisionTenant siempre corre con
+-- service-role (ver container.ts + auth-actions.ts), UpdateWorkspace es la
+-- unica escritura legitima sobre tenants (UPDATE, se conserva), y
+-- channel_bindings no tiene ningun escritor en la app todavia (alta manual,
+-- documentado en memoria del proyecto). Revocar estos permisos puntuales no
+-- cambia ningun comportamiento existente — solo cierra el bypass directo.
+--
+-- NOTA DE ALCANCE: el mismo patron de grants por-defecto sin revocar existe
+-- en las otras 21 tablas del schema. No se revoca en bloque aqui porque
+-- varias SI reciben escrituras legitimas via el cliente por-request
+-- (authenticated) para operaciones normales de la app (create/update de
+-- customers, agents, appointments, etc.) — revocar sin auditar caso por caso
+-- que caminos las necesitan rompería esas escrituras. Queda documentado como
+-- item HIGH pendiente de una pasada dedicada (ver checkpoint de auditoría).
+
+revoke insert, delete on public.tenants from anon, authenticated;
+revoke insert, update, delete on public.channel_bindings from anon, authenticated;
