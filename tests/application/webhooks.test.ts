@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DomainError } from "@/domain";
+import { DomainError, Identity } from "@/domain";
+import type { WebhookRepository } from "@/application/ports";
 import {
   CreateWebhook,
   DispatchWebhookEvent,
@@ -182,5 +183,38 @@ describe("DispatchWebhookEvent (SCR-011 §4.4, BK-04/BK-05)", () => {
     expect(result[0].status).toBe("failed");
     // Hallazgo ALTO de auditoría (catch{} vacío descartaba el motivo real del fallo).
     expect(result[0].errorDetail).toBe("network error");
+  });
+
+  it("no despacha a un Webhook no-deliverable aunque el repositorio lo devuelva (item MEDIO: isDeliverable nunca se llamaba — invariante solo en SQL)", async () => {
+    const ids = new SequentialIds();
+    const clock = new FixedClock();
+    const deliveries = new InMemoryWebhookDeliveries();
+    const sender = new FakeWebhookSender();
+    const realWebhooks = new InMemoryWebhooks();
+    const { webhookId } = await new CreateWebhook(ids, realWebhooks).execute({
+      tenantId,
+      name: "Archivado-pero-devuelto-igual",
+      url: "https://example.com/archived",
+      events: ["message.received"],
+    });
+    const archived = await realWebhooks.findById(Identity.of(webhookId));
+    await realWebhooks.save(archived!.withStatus("archived"));
+
+    // Repo deliberadamente mal comportado: ignora el status y devuelve el
+    // Webhook de todas formas — simula que la query de la DB fallara o que
+    // alguien reimplemente el repositorio sin el filtro. El caso de uso debe
+    // defenderse solo, sin depender de que el repo filtre bien.
+    const misbehavingWebhooks: WebhookRepository = {
+      save: (w) => realWebhooks.save(w),
+      findById: (wid) => realWebhooks.findById(wid),
+      listByTenant: (tid) => realWebhooks.listByTenant(tid),
+      findActiveByEvent: async () => [(await realWebhooks.findById(Identity.of(webhookId)))!],
+    };
+
+    const dispatch = new DispatchWebhookEvent(ids, clock, misbehavingWebhooks, deliveries, sender);
+    const result = await dispatch.execute(tenantId, "message.received", {});
+
+    expect(result.dispatched).toBe(0);
+    expect(sender.sent).toHaveLength(0);
   });
 });

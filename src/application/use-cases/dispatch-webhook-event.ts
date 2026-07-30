@@ -36,6 +36,11 @@ export class DispatchWebhookEvent {
 
     let dispatched = 0;
     for (const webhook of subscribed) {
+      // BK-04: un Webhook archivado no recibe eventos. La query de
+      // findActiveByEvent ya filtra por status, pero el invariante no debe
+      // vivir SOLO en SQL (hallazgo MEDIO de auditoría) — se re-verifica
+      // aquí para que la regla de negocio se sostenga aunque cambie la query.
+      if (!webhook.isDeliverable) continue;
       try {
         const result = await this.sender.send(webhook, eventName, payload);
         await this.deliveries.save(
