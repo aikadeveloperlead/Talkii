@@ -31,11 +31,11 @@ export class UpdateCompany {
     const company = Company.create(existing?.id ?? this.ids.next(), {
       tenantId,
       businessName: input.businessName,
-      legalName: input.legalName,
-      taxId: input.taxId,
-      email: input.email,
-      phone: input.phone,
-      website: input.website,
+      legalName: input.legalName ?? existing?.legalName,
+      taxId: input.taxId ?? existing?.taxId,
+      email: input.email ?? existing?.email,
+      phone: input.phone ?? existing?.phone,
+      website: input.website ?? existing?.website,
     });
     await this.companies.save(company);
   }
