@@ -83,6 +83,24 @@ describe("CreateWebhook (SCR-011 BK-01 HTTPS, BK-02 nombre único, BK-03 >=1 eve
     await createWebhook.execute(input);
     await expect(createWebhook.execute(input)).rejects.toThrow(DomainError);
   });
+
+  it.each([
+    "https://localhost/hook",
+    "https://127.0.0.1/hook",
+    "https://169.254.169.254/latest/meta-data",
+    "https://10.0.0.5/hook",
+    "https://172.16.0.5/hook",
+    "https://192.168.1.10/hook",
+    "https://[::1]/hook",
+  ])(
+    "rechaza URL apuntando a red privada o metadata (SSRF): %s",
+    async (url) => {
+      const { createWebhook } = setup();
+      await expect(
+        createWebhook.execute({ tenantId, name: "X", url, events: ["message.received"] }),
+      ).rejects.toThrow(DomainError);
+    },
+  );
 });
 
 describe("SetWebhookStatus / DuplicateWebhook", () => {

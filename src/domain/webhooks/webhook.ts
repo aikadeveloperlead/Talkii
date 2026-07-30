@@ -1,4 +1,4 @@
-import { Entity, Identity, invariant } from "../shared";
+import { Entity, Identity, invariant, isDisallowedWebhookHostname } from "../shared";
 
 /**
  * Webhook — Entidad del bounded context Webhooks & Integraciones (SCR-011).
@@ -29,6 +29,10 @@ export class Webhook extends Entity {
   static create(id: Identity, props: WebhookProps): Webhook {
     invariant(props.name.trim().length > 0, "Webhook: el nombre no puede estar vacío");
     invariant(props.url.startsWith("https://"), "Webhook: la URL debe ser HTTPS (BK-01)");
+    invariant(
+      !targetsDisallowedHost(props.url),
+      "Webhook: la URL no puede apuntar a localhost, una red privada ni al servicio de metadata en la nube (SSRF)",
+    );
     invariant(props.events.length > 0, "Webhook: debe seleccionar al menos un evento (BK-03)");
     return new Webhook(id, {
       ...props,
@@ -67,5 +71,14 @@ export class Webhook extends Entity {
 
   withStatus(status: WebhookStatus): Webhook {
     return Webhook.create(this.id, { ...this.props, status });
+  }
+}
+
+/** Bloqueo estático (sin DNS) de hosts obviamente peligrosos declarados como IP/hostname literal. */
+function targetsDisallowedHost(url: string): boolean {
+  try {
+    return isDisallowedWebhookHostname(new URL(url).hostname);
+  } catch {
+    return true;
   }
 }
