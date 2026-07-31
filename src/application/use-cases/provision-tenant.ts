@@ -28,8 +28,14 @@ export class ProvisionTenant {
   ) {}
 
   async execute(input: ProvisionTenantInput): Promise<ProvisionTenantResult> {
+    // `ownerUserId` hace explícita la relación usuario↔organización, que antes
+    // solo existía como claim en el JWT. El índice único parcial de la
+    // migración 0030 convierte esto en el backstop de la carrera: un doble
+    // submit del onboarding choca con 23505 en vez de crear un Tenant huérfano
+    // e inalcanzable (hallazgo MEDIUM de la auditoría santa-loop).
     const tenant = Tenant.create(this.ids.next(), {
       name: input.organizationName,
+      ownerUserId: input.userId,
     });
 
     await this.tenants.save(tenant);

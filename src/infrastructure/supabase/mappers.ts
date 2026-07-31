@@ -35,6 +35,7 @@ export interface TenantRow {
   description: string | null;
   logo: string | null;
   status: string;
+  owner_user_id: string | null;
 }
 export interface AgentRow {
   id: string;
@@ -111,6 +112,7 @@ export function tenantToRow(tenant: Tenant): TenantRow {
     description: tenant.description ?? null,
     logo: tenant.logo ?? null,
     status: tenant.status,
+    owner_user_id: tenant.ownerUserId ?? null,
   };
 }
 export function rowToTenant(row: TenantRow): Tenant {
@@ -119,6 +121,7 @@ export function rowToTenant(row: TenantRow): Tenant {
     description: row.description ?? undefined,
     logo: row.logo ?? undefined,
     status: row.status as Tenant["status"],
+    ownerUserId: row.owner_user_id ?? undefined,
   });
 }
 

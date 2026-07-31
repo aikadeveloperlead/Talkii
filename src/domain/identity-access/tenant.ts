@@ -27,6 +27,13 @@ export interface TenantProps {
   description?: string;
   logo?: string;
   status?: WorkspaceStatus;
+  /**
+   * Usuario de auth que aprovisionó esta organización. Hace explícita una
+   * relación que antes solo existía como claim en el JWT — sin ella, un Tenant
+   * creado por un doble submit del onboarding quedaba huérfano e inalcanzable
+   * (hallazgo MEDIUM de la auditoría santa-loop). Único en la BD.
+   */
+  ownerUserId?: string;
 }
 
 export class Tenant extends Entity {
@@ -63,6 +70,10 @@ export class Tenant extends Entity {
 
   get status(): WorkspaceStatus {
     return this.props.status;
+  }
+
+  get ownerUserId(): string | undefined {
+    return this.props.ownerUserId;
   }
 
   withEdits(changes: Partial<Pick<TenantProps, "name" | "description" | "logo">>): Tenant {

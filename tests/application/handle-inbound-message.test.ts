@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   Agent,
+  type Channel,
   ChannelBinding,
   Conversation,
   Decision,
@@ -16,6 +17,7 @@ import {
   StartConversation,
 } from "@/application/use-cases";
 import type {
+  ConversationRepository,
   ExecutionContext,
   IDecisionEngine,
   IdGenerator,
@@ -406,5 +408,85 @@ describe("HandleInboundMessage — throttle del pipeline WhatsApp→LLM (hallazg
     await useCase.execute(inbound);
 
     expect(rateLimiter.keys[0]).toContain(binding.tenantId.toString());
+  });
+});
+
+describe("HandleInboundMessage — carrera de Conversation duplicada (hallazgo MEDIUM)", () => {
+  /**
+   * Rechaza el primer save (como el índice único de 0030) tras dejar entrar a la
+   * ganadora. NO se hereda de InMemoryConversations a propósito: ese fake asigna
+   *  como propiedad de instancia, que sombrearía un override de prototipo.
+   */
+  class ConflictOnceConversations implements ConversationRepository {
+    private rejected = false;
+    private readonly inner = new InMemoryConversations();
+    constructor(private readonly winner: Conversation) {}
+    async save(conversation: Conversation): Promise<void> {
+      if (!this.rejected) {
+        this.rejected = true;
+        await this.inner.save(this.winner);
+        throw new DomainError(
+          "Conversation: ya existe una Conversation para este participante en el canal",
+        );
+      }
+      return this.inner.save(conversation);
+    }
+    findById(id: Identity) {
+      return this.inner.findById(id);
+    }
+    findByParticipant(tenantId: Identity, channel: Channel, handle: string) {
+      return this.inner.findByParticipant(tenantId, channel, handle);
+    }
+  }
+
+  it("usa la Conversation ganadora en vez de perder el mensaje del cliente", async () => {
+    const ids = new SequentialIds();
+    const clock = new FixedClock();
+    const sessions = new InMemorySessions();
+    const events = new InMemoryEvents();
+    const agents = new InMemoryAgents();
+    const funnels = new InMemoryFunnels();
+    const decisions = new InMemoryDecisions();
+    const sender = new FakeMessageSender();
+
+    const winner = Conversation.create(Identity.of("conv-ganadora"), {
+      tenantId: binding.tenantId,
+      channel: "whatsapp",
+      participants: [{ channelHandle: inbound.from, displayName: "Nicolás" }],
+    });
+    const conversations = new ConflictOnceConversations(winner);
+
+    await agents.save(
+      Agent.create(Identity.of("a1"), {
+        tenantId: binding.tenantId,
+        name: "Vendedor",
+        objective: "vender",
+        permanentPrompt: "sé amable",
+        policies: [],
+        reasoningProfile: "balanced",
+      }),
+    );
+
+    const useCase = new HandleInboundMessage(
+      new InMemoryChannelBindings([binding]),
+      conversations,
+      sessions,
+      ids,
+      clock,
+      new StartConversation(ids, clock, conversations, sessions),
+      new IngestEvent(ids, clock, sessions, events),
+      new MakeDecision(new SendReplyEngine(ids), events, sessions, agents, funnels, decisions, ids, clock),
+      new ExecuteDecision(ids, clock, decisions, events, sender),
+      24 * 60 * 60 * 1000,
+      new InMemoryRateLimiter(),
+      { limit: 100, windowSeconds: 60 },
+    );
+
+    const result = await useCase.execute(inbound);
+
+    // No se pierde el mensaje: se procesa sobre la Conversation ganadora.
+    expect(result.status).toBe("processed");
+    const active = await sessions.findActiveByConversation(winner.id);
+    expect(active).not.toBeNull();
   });
 });

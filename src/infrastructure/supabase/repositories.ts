@@ -66,13 +66,17 @@ export class SupabaseTenantRepository implements TenantRepository {
 
   async save(tenant: Tenant): Promise<void> {
     const { error } = await this.db.from("tenants").upsert(tenantToRow(tenant));
+    // Backstop de la carrera de onboarding (índice único parcial sobre
+    // owner_user_id, migración 0030): el segundo submit concurrente choca aquí
+    // en vez de crear un Tenant huérfano.
+    throwIfUniqueViolation(error, "Tenant: este usuario ya tiene una organización aprovisionada");
     if (error) fail("tenants.upsert", error);
   }
 
   async findById(id: Identity): Promise<Tenant | null> {
     const { data, error } = await this.db
       .from("tenants")
-      .select("id,name,description,logo,status")
+      .select("id,name,description,logo,status,owner_user_id")
       .eq("id", id.toString())
       .maybeSingle();
     if (error) fail("tenants.select", error);
@@ -175,6 +179,14 @@ export class SupabaseConversationRepository implements ConversationRepository {
     const { error } = await this.db
       .from("conversations")
       .upsert(conversationToRow(conversation));
+    // Backstop de la carrera de resolveActiveSession (índice único sobre
+    // tenant+canal+primer participante, migración 0030): dos mensajes casi
+    // simultáneos del mismo cliente ya no parten su historial en dos
+    // Conversations. El caller reconsulta y usa la ganadora.
+    throwIfUniqueViolation(
+      error,
+      "Conversation: ya existe una Conversation para este participante en el canal",
+    );
     if (error) fail("conversations.upsert", error);
   }
 

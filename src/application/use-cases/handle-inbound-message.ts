@@ -146,22 +146,38 @@ export class HandleInboundMessage {
     tenantId: string,
     input: InboundMessageInput,
   ): Promise<string> {
-    const conversation = await this.conversations.findByParticipant(
+    let conversation = await this.conversations.findByParticipant(
       Identity.of(tenantId),
       input.channel,
       input.from,
     );
 
     if (!conversation) {
-      const started = await this.startConversation.execute({
-        tenantId,
-        channel: input.channel,
-        participant: {
-          channelHandle: input.from,
-          displayName: input.displayName,
-        },
-      });
-      return started.sessionId;
+      try {
+        const started = await this.startConversation.execute({
+          tenantId,
+          channel: input.channel,
+          participant: {
+            channelHandle: input.from,
+            displayName: input.displayName,
+          },
+        });
+        return started.sessionId;
+      } catch (error) {
+        // Carrera perdida: otra request concurrente (o un reintento de Meta en
+        // paralelo) ya creó la Conversation de este participante — el índice
+        // único de 0030 la rechaza aquí. Se reconsulta y se sigue con la
+        // ganadora, mismo criterio que la carrera de Session más abajo: fallar
+        // la request perdería el mensaje del cliente.
+        if (!(error instanceof DomainError)) throw error;
+        const winner = await this.conversations.findByParticipant(
+          Identity.of(tenantId),
+          input.channel,
+          input.from,
+        );
+        if (!winner) throw error;
+        conversation = winner;
+      }
     }
 
     const active = await this.sessions.findActiveByConversation(conversation.id);
