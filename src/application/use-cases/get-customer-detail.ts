@@ -5,6 +5,9 @@ import {
   LeadRepository,
 } from "../ports/crm-repositories";
 
+/** Entradas de timeline devueltas con el detalle del Customer (las más recientes). */
+const TIMELINE_LIMIT = 100;
+
 /** GetCustomerDetail — SCR-003 §7 GET /customers/:id. */
 export interface CustomerDetailDTO {
   id: string;
@@ -35,7 +38,9 @@ export class GetCustomerDetail {
     if (!customer) return null;
 
     const lead = await this.leads.findByCustomerId(customer.id);
-    const entries = await this.timeline.findByCustomer(customer.id);
+    // Acotado: el timeline es append-only sin retención y antes se traía entero
+    // (hallazgo HIGH de la auditoría santa-loop).
+    const entries = await this.timeline.findByCustomer(customer.id, TIMELINE_LIMIT);
 
     return {
       id: customer.id.toString(),

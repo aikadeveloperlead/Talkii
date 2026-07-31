@@ -198,11 +198,17 @@ export class InMemoryEvents implements EventRepository {
       e.sessionId.equals(sessionId),
     );
   }
-  async findBySessions(sessionIds: Identity[]): Promise<Event[]> {
+  /** Último `limit` recibido — permite a los tests probar que la cota se propaga. */
+  lastFindBySessionsLimit?: number;
+  async findBySessions(sessionIds: Identity[], limit?: number): Promise<Event[]> {
     this.findBySessionsCalls += 1;
-    return [...this.store.values()].filter((e) =>
-      sessionIds.some((id) => e.sessionId.equals(id)),
-    );
+    this.lastFindBySessionsLimit = limit;
+    const all = [...this.store.values()]
+      .filter((e) => sessionIds.some((id) => e.sessionId.equals(id)))
+      .sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
+    // Mismo contrato que el repositorio real: `limit` devuelve el bloque MÁS
+    // RECIENTE, en orden cronológico ascendente.
+    return limit === undefined ? all : all.slice(-limit);
   }
 }
 
@@ -373,8 +379,11 @@ export class InMemoryCustomerTimeline implements CustomerTimelineRepository {
   async append(entry: CustomerTimelineEntry): Promise<void> {
     this.store.set(entry.id.toString(), entry);
   }
-  async findByCustomer(customerId: Identity): Promise<CustomerTimelineEntry[]> {
-    return [...this.store.values()].filter((e) => e.customerId.equals(customerId));
+  async findByCustomer(customerId: Identity, limit?: number): Promise<CustomerTimelineEntry[]> {
+    const all = [...this.store.values()]
+      .filter((e) => e.customerId.equals(customerId))
+      .sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
+    return limit === undefined ? all : all.slice(-limit);
   }
 }
 
@@ -541,8 +550,14 @@ export class InMemoryWebhookDeliveries implements WebhookDeliveryRepository {
   async save(delivery: WebhookDelivery): Promise<void> {
     this.store.set(delivery.id.toString(), delivery);
   }
-  async listByWebhook(webhookId: Identity): Promise<WebhookDelivery[]> {
-    return [...this.store.values()].filter((d) => d.webhookId.equals(webhookId));
+  /** Último `limit` recibido — permite a los tests probar que la cota se propaga. */
+  lastListByWebhookLimit?: number;
+  async listByWebhook(webhookId: Identity, limit?: number): Promise<WebhookDelivery[]> {
+    this.lastListByWebhookLimit = limit;
+    const all = [...this.store.values()]
+      .filter((d) => d.webhookId.equals(webhookId))
+      .sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
+    return limit === undefined ? all : all.slice(0, limit);
   }
 }
 

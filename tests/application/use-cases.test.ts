@@ -580,3 +580,55 @@ describe("Modelo de Ejecución end-to-end (SSOT Cap. 11)", () => {
     expect(sessionEvents.some((e) => e.type === "reasoning.failed")).toBe(true);
   });
 });
+
+describe("Cotas en consultas sobre tablas append-only (hallazgo HIGH santa-loop)", () => {
+  it("MakeDecision.buildHistory pide un bloque acotado, no el historial entero", async () => {
+    const ids = new SequentialIds();
+    const clock = new FixedClock();
+    const conversations = new InMemoryConversations();
+    const sessions = new InMemorySessions();
+    const events = new InMemoryEvents();
+    const agents = new InMemoryAgents();
+    const funnels = new InMemoryFunnels();
+    const decisions = new InMemoryDecisions();
+
+    const start = new StartConversation(ids, clock, conversations, sessions);
+    const { sessionId } = await start.execute({
+      tenantId: "t1",
+      channel: "whatsapp",
+      participant: { channelHandle: "+573001112233" },
+    });
+
+    const ingest = new IngestEvent(ids, clock, sessions, events);
+    const { eventId } = await ingest.execute({
+      sessionId,
+      type: "message.received",
+      payload: { text: "hola" },
+    });
+
+    const agent = Agent.create(ids.next(), {
+      tenantId: Identity.of("t1"),
+      name: "Ventas",
+      objective: "calificar leads",
+      permanentPrompt: "eres un asistente de ventas",
+      policies: [],
+      reasoningProfile: "sales-default",
+    });
+    await agents.save(agent);
+
+    await new MakeDecision(
+      new StubDecisionEngine(ids),
+      events,
+      sessions,
+      agents,
+      funnels,
+      decisions,
+      ids,
+      clock,
+    ).execute({ eventId, agentId: agent.id.toString() });
+
+    // Antes se llamaba sin límite (undefined) y se descartaba casi todo en JS.
+    expect(events.lastFindBySessionsLimit).toBeGreaterThan(0);
+    expect(events.lastFindBySessionsLimit).toBeLessThanOrEqual(100);
+  });
+});

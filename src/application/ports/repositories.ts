@@ -77,7 +77,13 @@ export interface EventRepository {
   findById(id: Identity): Promise<Event | null>;
   findBySession(sessionId: Identity): Promise<Event[]>;
   /** Batch: todos los Events de varias Sessions en un único round-trip (evita N+1 al recorrer una Conversation con varias Sessions). */
-  findBySessions(sessionIds: Identity[]): Promise<Event[]>;
+  /**
+   * Events de varias Sessions en orden cronológico ascendente. `limit` acota al
+   * bloque MÁS RECIENTE (hallazgo HIGH de la auditoría santa-loop: sin cota, un
+   * historial largo se traía entero a memoria para quedarse con los últimos
+   * turnos, y `events` es append-only sin retención).
+   */
+  findBySessions(sessionIds: Identity[], limit?: number): Promise<Event[]>;
 }
 
 export interface DecisionRepository {

@@ -22,7 +22,8 @@ export interface WebhookRepository {
 
 export interface WebhookDeliveryRepository {
   save(delivery: WebhookDelivery): Promise<void>;
-  listByWebhook(webhookId: Identity): Promise<WebhookDelivery[]>;
+  /** `limit` acota a las entregas MÁS RECIENTES (tabla append-only sin retención). */
+  listByWebhook(webhookId: Identity, limit?: number): Promise<WebhookDelivery[]>;
 }
 
 export interface WebhookDeliveryResult {

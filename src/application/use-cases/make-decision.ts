@@ -23,6 +23,8 @@ const MESSAGE_EVENT_TYPES: Record<string, "customer" | "agent"> = {
 
 /** Techo de turnos previos incluidos como memoria conversacional (evita prompts sin límite). */
 const HISTORY_LIMIT = 20;
+/** Factor de sobre-pedido: no todo Event es un turno de mensaje (ver buildHistory). */
+const HISTORY_OVERFETCH = 3;
 
 /** Primera transferKeyword del Agent que aparece (case-insensitive) en el texto del Event, o null. */
 function matchTransferKeyword(event: Event, keywords: readonly string[]): string | null {
@@ -200,7 +202,15 @@ export class MakeDecision {
   ): Promise<ConversationHistoryEntry[]> {
     const sessions = await this.sessions.findAllByConversation(session.conversationId);
 
-    const events = await this.events.findBySessions(sessions.map((s) => s.id));
+    // Se sobre-pide respecto de HISTORY_LIMIT porque no todos los Events son
+    // turnos de mensaje (hay `reasoning.failed`, `operator.message.composed`,
+    // etc. que se filtran abajo), pero acotado: antes se traía el historial
+    // ENTERO de la Conversation para quedarse con 20 turnos — hallazgo HIGH de
+    // la auditoría santa-loop, y `events` crece sin retención.
+    const events = await this.events.findBySessions(
+      sessions.map((s) => s.id),
+      HISTORY_LIMIT * HISTORY_OVERFETCH,
+    );
     const turns: ConversationHistoryEntry[] = [];
     for (const e of events) {
       if (e.id.equals(currentEventId)) continue;

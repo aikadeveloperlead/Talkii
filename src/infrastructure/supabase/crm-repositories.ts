@@ -191,13 +191,27 @@ export class SupabaseCustomerTimelineRepository implements CustomerTimelineRepos
     if (error) fail("customer_timeline.insert", error);
   }
 
-  async findByCustomer(customerId: Identity): Promise<CustomerTimelineEntry[]> {
+  async findByCustomer(customerId: Identity, limit?: number): Promise<CustomerTimelineEntry[]> {
+    // Sin `limit` se conserva el orden ascendente. Con `limit`, se piden las
+    // entradas MÁS RECIENTES (desc + limit) y se invierten — hallazgo HIGH de la
+    // auditoría santa-loop: el timeline es append-only y se traía entero.
+    if (limit === undefined) {
+      const { data, error } = await this.db
+        .from("customer_timeline")
+        .select(CUSTOMER_TIMELINE_COLUMNS)
+        .eq("customer_id", customerId.toString())
+        .order("occurred_at", { ascending: true });
+      if (error) fail("customer_timeline.select", error);
+      return (data as CustomerTimelineRow[]).map(rowToTimelineEntry);
+    }
+
     const { data, error } = await this.db
       .from("customer_timeline")
       .select(CUSTOMER_TIMELINE_COLUMNS)
       .eq("customer_id", customerId.toString())
-      .order("occurred_at", { ascending: true });
+      .order("occurred_at", { ascending: false })
+      .limit(limit);
     if (error) fail("customer_timeline.select", error);
-    return (data as CustomerTimelineRow[]).map(rowToTimelineEntry);
+    return (data as CustomerTimelineRow[]).map(rowToTimelineEntry).reverse();
   }
 }

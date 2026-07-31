@@ -27,6 +27,11 @@ const MESSAGE_EVENT_TYPES: Record<string, "customer" | "agent"> = {
   "message.sent": "agent",
 };
 
+const DEFAULT_MESSAGE_LIMIT = 50;
+export const MAX_MESSAGE_LIMIT = 200;
+/** No todo Event es un turno de mensaje: se sobre-pide para no quedarse corto. */
+const MESSAGE_OVERFETCH = 3;
+
 export class ListConversationMessages {
   constructor(
     private readonly conversations: ConversationRepository,
@@ -34,13 +39,29 @@ export class ListConversationMessages {
     private readonly events: EventRepository,
   ) {}
 
-  async execute(conversationId: string): Promise<ConversationMessageDTO[] | null> {
+  /**
+   * `limit` acota al bloque de mensajes MÁS RECIENTE. Antes se devolvía el
+   * historial completo de la Conversation (hallazgo HIGH de la auditoría
+   * santa-loop: `events` es append-only sin retención, así que una relación
+   * larga hacía que una sola request serializara todo su historial).
+   */
+  async execute(
+    conversationId: string,
+    limit = DEFAULT_MESSAGE_LIMIT,
+  ): Promise<ConversationMessageDTO[] | null> {
     const conversation = await this.conversations.findById(Identity.of(conversationId));
     if (!conversation) return null;
 
+    const capped = Math.min(Math.max(limit, 1), MAX_MESSAGE_LIMIT);
+
     const sessions = await this.sessions.findAllByConversation(conversation.id);
 
-    const events = await this.events.findBySessions(sessions.map((s) => s.id));
+    // Se sobre-pide porque no todo Event es un turno de mensaje (se filtran
+    // abajo por MESSAGE_EVENT_TYPES), pero sigue acotado.
+    const events = await this.events.findBySessions(
+      sessions.map((s) => s.id),
+      capped * MESSAGE_OVERFETCH,
+    );
     const messages: ConversationMessageDTO[] = [];
     for (const event of events) {
       const sender = MESSAGE_EVENT_TYPES[event.type];

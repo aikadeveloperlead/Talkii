@@ -70,12 +70,19 @@ export class SupabaseWebhookDeliveryRepository implements WebhookDeliveryReposit
     if (error) fail("webhook_deliveries.insert", error);
   }
 
-  async listByWebhook(webhookId: Identity): Promise<WebhookDelivery[]> {
-    const { data, error } = await this.db
+  async listByWebhook(webhookId: Identity, limit?: number): Promise<WebhookDelivery[]> {
+    // Ya venía ordenado desc (más reciente primero); lo que faltaba era la cota
+    // — hallazgo HIGH de la auditoría santa-loop: sin `limit`, un webhook activo
+    // hacía que una sola request trajera TODAS sus entregas históricas, cada una
+    // con su `payload` jsonb completo.
+    let query = this.db
       .from("webhook_deliveries")
       .select(WEBHOOK_DELIVERY_COLUMNS)
       .eq("webhook_id", webhookId.toString())
       .order("occurred_at", { ascending: false });
+    if (limit !== undefined) query = query.limit(limit);
+
+    const { data, error } = await query;
     if (error) fail("webhook_deliveries.select", error);
     return (data as WebhookDeliveryRow[]).map(rowToDelivery);
   }

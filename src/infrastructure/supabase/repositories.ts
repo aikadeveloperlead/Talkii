@@ -295,15 +295,31 @@ export class SupabaseEventRepository implements EventRepository {
     return (data as EventRow[]).map(rowToEvent);
   }
 
-  async findBySessions(sessionIds: Identity[]): Promise<Event[]> {
+  async findBySessions(sessionIds: Identity[], limit?: number): Promise<Event[]> {
     if (sessionIds.length === 0) return [];
+    const ids = sessionIds.map((id) => id.toString());
+
+    // Sin `limit` se conserva el orden ascendente directo. Con `limit`, se pide
+    // el bloque más RECIENTE (orden descendente + limit) y se invierte en
+    // memoria: traer todo para descartar casi todo era el hallazgo HIGH.
+    if (limit === undefined) {
+      const { data, error } = await this.db
+        .from("events")
+        .select("id,session_id,type,occurred_at,payload,external_id")
+        .in("session_id", ids)
+        .order("occurred_at", { ascending: true });
+      if (error) fail("events.select", error);
+      return (data as EventRow[]).map(rowToEvent);
+    }
+
     const { data, error } = await this.db
       .from("events")
       .select("id,session_id,type,occurred_at,payload,external_id")
-      .in("session_id", sessionIds.map((id) => id.toString()))
-      .order("occurred_at", { ascending: true });
+      .in("session_id", ids)
+      .order("occurred_at", { ascending: false })
+      .limit(limit);
     if (error) fail("events.select", error);
-    return (data as EventRow[]).map(rowToEvent);
+    return (data as EventRow[]).map(rowToEvent).reverse();
   }
 }
 

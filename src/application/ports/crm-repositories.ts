@@ -42,5 +42,6 @@ export interface LeadRepository {
 
 export interface CustomerTimelineRepository {
   append(entry: CustomerTimelineEntry): Promise<void>;
-  findByCustomer(customerId: Identity): Promise<CustomerTimelineEntry[]>;
+  /** `limit` acota a las entradas MÁS RECIENTES (timeline append-only sin retención). */
+  findByCustomer(customerId: Identity, limit?: number): Promise<CustomerTimelineEntry[]>;
 }
