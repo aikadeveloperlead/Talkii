@@ -38,7 +38,7 @@ export class ProvisionTenant {
       ownerUserId: input.userId,
     });
 
-    await this.tenants.save(tenant);
+    await this.tenants.create(tenant);
     await this.authGateway.assignTenantToUser(
       input.userId,
       tenant.id.toString(),

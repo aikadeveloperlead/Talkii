@@ -64,13 +64,26 @@ function fail(op: string, error: { message: string }): never {
 export class SupabaseTenantRepository implements TenantRepository {
   constructor(private readonly db: SupabaseClient) {}
 
-  async save(tenant: Tenant): Promise<void> {
-    const { error } = await this.db.from("tenants").upsert(tenantToRow(tenant));
+  async create(tenant: Tenant): Promise<void> {
+    const { error } = await this.db.from("tenants").insert(tenantToRow(tenant));
     // Backstop de la carrera de onboarding (índice único parcial sobre
     // owner_user_id, migración 0030): el segundo submit concurrente choca aquí
     // en vez de crear un Tenant huérfano.
     throwIfUniqueViolation(error, "Tenant: este usuario ya tiene una organización aprovisionada");
-    if (error) fail("tenants.upsert", error);
+    if (error) fail("tenants.insert", error);
+  }
+
+  /**
+   * UPDATE explícito, no upsert: `upsert` es `INSERT ... ON CONFLICT` y exige
+   * privilegio de INSERT aunque termine actualizando, que es justo lo que la
+   * migración 0025 revoca al rol `authenticated` sobre `tenants`. Usar upsert
+   * aquí rompía UpdateWorkspace con "insufficient privilege" (verificado
+   * empíricamente contra Postgres — los tests con fakes en memoria no lo veían).
+   */
+  async save(tenant: Tenant): Promise<void> {
+    const row = tenantToRow(tenant);
+    const { error } = await this.db.from("tenants").update(row).eq("id", row.id);
+    if (error) fail("tenants.update", error);
   }
 
   async findById(id: Identity): Promise<Tenant | null> {

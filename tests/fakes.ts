@@ -9,6 +9,7 @@ import {
   Customer,
   CustomerTimelineEntry,
   Decision,
+  DomainError,
   Event,
   Funnel,
   Identity,
@@ -99,6 +100,16 @@ function makeMapRepo<T extends { id: Identity }>() {
 
 export class InMemoryTenants implements TenantRepository {
   private repo = makeMapRepo<Tenant>();
+  /**
+   * `create` replica la semántica del repositorio real: INSERT, no upsert —
+   * falla si el Tenant ya existe (así el test nota si algo intenta re-crear).
+   */
+  create = async (tenant: Tenant): Promise<void> => {
+    if (await this.repo.findById(tenant.id)) {
+      throw new DomainError("Tenant: ya existe");
+    }
+    return this.repo.save(tenant);
+  };
   save = this.repo.save;
   findById = this.repo.findById;
 }

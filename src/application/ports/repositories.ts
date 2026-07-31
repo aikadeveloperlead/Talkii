@@ -32,6 +32,14 @@ export class DuplicateExternalEventError extends Error {
 }
 
 export interface TenantRepository {
+  /**
+   * Alta de un Tenant nuevo. Separada de `save` a propósito: solo el
+   * aprovisionamiento (service-role) inserta Tenants — el rol `authenticated`
+   * tiene INSERT revocado sobre `tenants` (migración 0025) para que nadie
+   * pueda crear organizaciones por PostgREST directo.
+   */
+  create(tenant: Tenant): Promise<void>;
+  /** Actualiza un Tenant existente. NO inserta: es la operación del caller autenticado. */
   save(tenant: Tenant): Promise<void>;
   findById(id: Identity): Promise<Tenant | null>;
 }
