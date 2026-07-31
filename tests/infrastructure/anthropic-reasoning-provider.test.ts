@@ -85,6 +85,26 @@ describe("AnthropicReasoningProvider (adaptador IReasoningProvider sobre la Mess
     await expect(provider.reason(baseRequest())).rejects.toThrow(/401/);
   });
 
+  it("pasa un AbortSignal con timeout al fetch (hallazgo HIGH: cuelga el after() del webhook)", async () => {
+    const fetchImpl = fakeFetch({
+      model: "claude-sonnet-5",
+      content: [{ type: "text", text: "ok" }],
+    });
+    const provider = new AnthropicReasoningProvider({
+      apiKey: "sk-ant-test",
+      fetchImpl,
+      timeoutMs: 5000,
+    });
+
+    await provider.reason(baseRequest());
+
+    const [, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("marca 401 como error de tipo auth (permanente)", async () => {
     const fetchImpl = fakeFetch({ error: { message: "invalid_api_key" } }, false, 401);
     const provider = new AnthropicReasoningProvider({ apiKey: "sk-ant-bad", fetchImpl });

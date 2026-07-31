@@ -9,6 +9,7 @@ import {
   UpdateCustomerTags,
   UpdateLead,
 } from "@/application/use-cases";
+import { MAX_LIMIT } from "@/application/use-cases/list-customers";
 import {
   FixedClock,
   InMemoryCustomerTimeline,
@@ -151,6 +152,27 @@ describe("ListCustomers", () => {
     const second = await listCustomers.execute({ tenantId, limit: 2, cursor: first.nextCursor! });
     expect(second.items.map((c) => c.fullName)).toEqual(["Uno"]);
     expect(second.nextCursor).toBeNull();
+  });
+
+  it("acota el limit del cliente a un techo (hallazgo MEDIUM: ?limit=5000000 volcaba la tabla)", async () => {
+    const customers = new InMemoryCustomers();
+    let receivedLimit: number | undefined;
+    const spy = {
+      ...customers,
+      search: (
+        t: Identity,
+        f: Parameters<InMemoryCustomers["search"]>[1],
+        c: string | null | undefined,
+        limit: number,
+      ) => {
+        receivedLimit = limit;
+        return customers.search(t, f, c, limit);
+      },
+    } as unknown as InMemoryCustomers;
+
+    await new ListCustomers(spy).execute({ tenantId, limit: 5_000_000 });
+
+    expect(receivedLimit).toBe(MAX_LIMIT);
   });
 });
 

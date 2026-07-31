@@ -91,6 +91,15 @@ describe("WhatsAppMessageSender (Graph API)", () => {
     ).rejects.toThrow("WhatsApp send: HTTP 401");
   });
 
+  it("pasa un AbortSignal con timeout al fetch (hallazgo HIGH: cuelga el after() del webhook)", async () => {
+    const { calls, fetchFn } = makeFetchFake({ ok: true, json: { messages: [] } });
+    const sender = new WhatsAppMessageSender({ accessToken: "x", fetchFn, timeoutMs: 5000 });
+
+    await sender.send({ binding, to: "57300", text: "hola" });
+
+    expect(calls[0].init.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("lanza si no hay ningún access token disponible", async () => {
     const { fetchFn } = makeFetchFake({ ok: true });
     const sender = new WhatsAppMessageSender({ fetchFn });

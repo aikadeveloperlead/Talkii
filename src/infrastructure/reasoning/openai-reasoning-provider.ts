@@ -21,9 +21,17 @@ export interface OpenAIOptions {
   maxTokens?: number;
   /** Inyectable para tests; por defecto `fetch` global. */
   fetchImpl?: typeof fetch;
+  /**
+   * Milisegundos antes de abortar la llamada (hallazgo HIGH de la auditoría
+   * santa-loop: sin timeout, un proveedor que acepta la conexión y no responde
+   * cuelga indefinidamente la continuación `after()` del webhook de WhatsApp).
+   * Presupuesto más amplio que un POST normal: el razonamiento es lento.
+   */
+  timeoutMs?: number;
 }
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 interface OpenAIResponse {
   choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
@@ -36,6 +44,7 @@ export class OpenAIReasoningProvider implements IReasoningProvider {
   private readonly model: string;
   private readonly maxTokens: number;
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
 
   constructor(options: OpenAIOptions = {}) {
     const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
@@ -48,6 +57,7 @@ export class OpenAIReasoningProvider implements IReasoningProvider {
     this.model = options.model ?? process.env.OPENAI_MODEL ?? "gpt-4o-mini";
     this.maxTokens = options.maxTokens ?? 1024;
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
   async reason(request: ReasoningRequest): Promise<ReasoningResult> {
@@ -67,6 +77,7 @@ export class OpenAIReasoningProvider implements IReasoningProvider {
           { role: "user", content: userContent },
         ],
       }),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
 
     if (!response.ok) {

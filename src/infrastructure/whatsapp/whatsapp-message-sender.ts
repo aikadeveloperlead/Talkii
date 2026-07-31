@@ -16,7 +16,17 @@ export interface WhatsAppSenderOptions {
   graphVersion?: string;
   /** Inyectable en tests; por defecto el fetch global de Node. */
   fetchFn?: typeof fetch;
+  /**
+   * Milisegundos antes de abortar el POST saliente (hallazgo HIGH de la
+   * auditoría santa-loop: sin timeout, un Graph API que acepta la conexión y
+   * no responde cuelga indefinidamente la continuación `after()` del webhook —
+   * el `fetch` de Node no tiene timeout por defecto). Mismo patrón que
+   * HttpWebhookSender.
+   */
+  timeoutMs?: number;
 }
+
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 interface GraphSendResponse {
   messages?: Array<{ id?: string }>;
@@ -54,6 +64,7 @@ export class WhatsAppMessageSender implements MessageSender {
           type: "text",
           text: { body: message.text },
         }),
+        signal: AbortSignal.timeout(this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       },
     );
 

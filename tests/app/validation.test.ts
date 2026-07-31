@@ -8,6 +8,7 @@ import {
   updateFunnelSchema,
   updateFunnelStepSchema,
   updateKnowledgeDocumentSchema,
+  updateLeadSchema,
   updatePreferencesSchema,
   updateTemplateSchema,
   updateWebhookSchema,
@@ -108,6 +109,18 @@ describe("Esquemas de validación de rutas PUT", () => {
       schema: updateFunnelStepSchema,
       valid: { name: "Contacto inicial", status: "active" },
       invalid: { status: "no-existe" },
+    },
+    {
+      name: "updateLeadSchema — status fuera del enum (hallazgo MEDIUM)",
+      schema: updateLeadSchema,
+      valid: { status: "qualified", score: 80 },
+      invalid: { status: "pwned" },
+    },
+    {
+      name: "updateLeadSchema — score negativo",
+      schema: updateLeadSchema,
+      valid: { score: 0 },
+      invalid: { score: -1 },
     },
   ];
 

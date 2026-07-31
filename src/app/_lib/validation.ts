@@ -103,6 +103,17 @@ export const updateTemplateSchema = z.object({
   components: templateComponentsSchema.optional(),
 });
 
+/**
+ * Hallazgo MEDIUM de la auditoría santa-loop: PATCH /customers/:id/lead era la
+ * única ruta con CERO validación de forma — `status` iba directo al dominio
+ * (que no valida: `LeadStatus` es solo un tipo de compilación), llegaba al
+ * CHECK de Postgres y volvía como 500 en vez de 400.
+ */
+export const updateLeadSchema = z.object({
+  status: z.enum(["new", "contacted", "qualified", "won", "lost"]).optional(),
+  score: z.number().min(0).optional(),
+});
+
 export const updateFunnelStepSchema = z.object({
   name: z.string().min(1).optional(),
   objective: z.string().optional(),

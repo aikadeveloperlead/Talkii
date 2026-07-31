@@ -21,10 +21,18 @@ export interface AnthropicOptions {
   maxTokens?: number;
   /** Inyectable para tests; por defecto `fetch` global. */
   fetchImpl?: typeof fetch;
+  /**
+   * Milisegundos antes de abortar la llamada (hallazgo HIGH de la auditoría
+   * santa-loop: sin timeout, un proveedor que acepta la conexión y no responde
+   * cuelga indefinidamente la continuación `after()` del webhook de WhatsApp).
+   * Presupuesto más amplio que un POST normal: el razonamiento es lento.
+   */
+  timeoutMs?: number;
 }
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 interface AnthropicResponse {
   content?: Array<{ type: string; text?: string }>;
@@ -38,6 +46,7 @@ export class AnthropicReasoningProvider implements IReasoningProvider {
   private readonly model: string;
   private readonly maxTokens: number;
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
 
   constructor(options: AnthropicOptions = {}) {
     const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY;
@@ -50,6 +59,7 @@ export class AnthropicReasoningProvider implements IReasoningProvider {
     this.model = options.model ?? process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
     this.maxTokens = options.maxTokens ?? 1024;
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
   async reason(request: ReasoningRequest): Promise<ReasoningResult> {
@@ -69,6 +79,7 @@ export class AnthropicReasoningProvider implements IReasoningProvider {
         system,
         messages: [{ role: "user", content: userContent }],
       }),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
 
     if (!response.ok) {

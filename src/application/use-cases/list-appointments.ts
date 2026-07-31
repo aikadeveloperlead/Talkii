@@ -1,6 +1,12 @@
 import { Identity } from "@/domain";
 import { AppointmentRepository } from "../ports/scheduling-repositories";
 
+const DEFAULT_LIMIT = 20;
+/** Techo de filas por página, para que un `limit` del cliente no vuelque la tabla. */
+export const MAX_LIMIT = 100;
+/** Techo de página: un OFFSET enorme hace que Postgres escanee y descarte millones de filas. */
+export const MAX_PAGE = 10_000;
+
 /** ListAppointments — SCR-004 §7 GET /appointments (paginado + filtros). */
 export interface ListAppointmentsInput {
   tenantId: string;
@@ -17,8 +23,11 @@ export class ListAppointments {
   constructor(private readonly appointments: AppointmentRepository) {}
 
   async execute(input: ListAppointmentsInput) {
-    const page = input.page && input.page > 0 ? input.page : 1;
-    const limit = input.limit && input.limit > 0 ? input.limit : 20;
+    // Techo además del piso (hallazgo MEDIUM de la auditoría santa-loop:
+    // `limit > 0` no acotaba por arriba, así que ?limit=5000000 volcaba la
+    // tabla entera del Tenant en una sola respuesta).
+    const page = Math.min(Math.max(input.page ?? 1, 1), MAX_PAGE);
+    const limit = Math.min(Math.max(input.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
 
     const { items, total } = await this.appointments.search(
       Identity.of(input.tenantId),
