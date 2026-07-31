@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
+import { DomainError, NotFoundError, ValidationError } from "@/domain";
 import { toErrorResponse } from "@/app/_lib/route-container";
 import {
   updateAgentSchema,
@@ -30,6 +31,30 @@ describe("toErrorResponse — ZodError → 400 (validación de esquema, item 8b)
     expect(body.error).toBe("Validation failed");
     expect(body.issues).toBeInstanceOf(Array);
     expect(body.issues.length).toBeGreaterThan(0);
+  });
+});
+
+describe("toErrorResponse — códigos HTTP por tipo de error de dominio (hallazgo MEDIUM)", () => {
+  it("NotFoundError → 404 (antes era 409 para el mismo caso)", async () => {
+    const response = toErrorResponse(new NotFoundError("X: el recurso no existe"));
+    expect(response.status).toBe(404);
+    expect((await response.json()).error).toBe("X: el recurso no existe");
+  });
+
+  it("ValidationError → 400", async () => {
+    const response = toErrorResponse(new ValidationError("X: entrada inválida"));
+    expect(response.status).toBe(400);
+  });
+
+  it("DomainError genérico sigue siendo 409 (conflicto de estado)", async () => {
+    const response = toErrorResponse(new DomainError("X: ya existe"));
+    expect(response.status).toBe(409);
+  });
+
+  it("un Error cualquiera sigue siendo 500 genérico, sin filtrar el mensaje", async () => {
+    const response = toErrorResponse(new Error("detalle interno sensible"));
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Internal Error" });
   });
 });
 

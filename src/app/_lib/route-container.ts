@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { DomainError } from "@/domain";
+import { DomainError, NotFoundError, ValidationError } from "@/domain";
 import { createContainer, type Container } from "./container";
 import { createServerSupabase } from "./supabase-server";
 
@@ -54,6 +54,16 @@ export function toErrorResponse(error: unknown): NextResponse {
       { error: "Validation failed", issues: error.issues },
       { status: 400 },
     );
+  }
+  // Orden importante: las subclases se evalúan antes que DomainError, que es
+  // el fallback de "conflicto de estado" (hallazgo MEDIUM de la auditoría
+  // santa-loop: antes TODO DomainError era 409, incluidos not-found y
+  // validación).
+  if (error instanceof NotFoundError) {
+    return NextResponse.json({ error: error.message }, { status: 404 });
+  }
+  if (error instanceof ValidationError) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
   if (error instanceof DomainError) {
     return NextResponse.json({ error: error.message }, { status: 409 });

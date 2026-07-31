@@ -1,4 +1,4 @@
-import { AppointmentTimelineEntry, DomainError, Identity } from "@/domain";
+import { AppointmentTimelineEntry, Identity, NotFoundError } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import { AppointmentRepository, AppointmentTimelineRepository } from "../ports/scheduling-repositories";
@@ -15,7 +15,7 @@ export class DeleteAppointment {
   async execute(appointmentId: string): Promise<void> {
     const appointment = await this.appointments.findById(Identity.of(appointmentId));
     if (!appointment) {
-      throw new DomainError("DeleteAppointment: el Appointment no existe");
+      throw new NotFoundError("DeleteAppointment: el Appointment no existe");
     }
 
     await this.appointments.save(appointment.deleted(this.clock.now()));

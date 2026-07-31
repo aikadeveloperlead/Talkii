@@ -19,6 +19,8 @@ import {
   type LeadRow,
 } from "./crm-mappers";
 
+import { throwIfUniqueViolation } from "./errors";
+
 function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
@@ -36,10 +38,24 @@ function encodeCustomerCursor(createdAt: string, id: string): string {
   return Buffer.from(`${createdAt}|${id}`, "utf8").toString("base64url");
 }
 
+/** UUID v1-v5 en cualquier variante — formato de todos los `id` del schema. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function decodeCustomerCursor(cursor: string): { createdAt: string; id: string } | null {
   try {
     const [createdAt, id] = Buffer.from(cursor, "base64url").toString("utf8").split("|");
     if (!createdAt || !id) return null;
+    // El cursor lo controla enteramente el cliente y sus dos mitades se
+    // interpolan en el mini-lenguaje de filtros de PostgREST, donde `,`/`(`/`)`
+    // son estructurales — sin validar, un cursor manipulado inyecta predicados
+    // extra (hallazgo MEDIUM de la auditoría santa-loop: el sanitizer ya se
+    // aplicaba al término de búsqueda pero no aquí). Se valida la FORMA en vez
+    // de limpiar caracteres: un cursor legítimo siempre es (ISO-8601, UUID).
+    if (!UUID_RE.test(id)) return null;
+    if (Number.isNaN(Date.parse(createdAt))) return null;
+    // `Date.parse` acepta formatos laxos; se exige el ISO exacto que emite
+    // `encodeCustomerCursor` para no dejar pasar nada con comas o paréntesis.
+    if (new Date(createdAt).toISOString() !== createdAt) return null;
     return { createdAt, id };
   } catch {
     return null;
@@ -63,6 +79,9 @@ export class SupabaseCustomerRepository implements CustomerRepository {
 
   async save(customer: Customer): Promise<void> {
     const { error } = await this.db.from("customers").upsert(customerToRow(customer));
+    // Perder la carrera del check-then-act de CreateCustomer (findByPhone) debe
+    // ser un 409, no un 500 — hallazgo MEDIUM de la auditoría santa-loop.
+    throwIfUniqueViolation(error, "Customer: ya existe un Customer con ese teléfono en el Tenant");
     if (error) fail("customers.upsert", error);
   }
 

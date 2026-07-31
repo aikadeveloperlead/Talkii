@@ -1,4 +1,4 @@
-import { DomainError, Identity } from "@/domain";
+import { Identity, NotFoundError } from "@/domain";
 import { KnowledgeRepository } from "../ports/knowledge-repositories";
 
 /** UpdateKnowledgeDocument — SCR-009 (BK-03: editar regresa el estado a "pending"). */
@@ -15,7 +15,7 @@ export class UpdateKnowledgeDocument {
   async execute(input: UpdateKnowledgeDocumentInput): Promise<void> {
     const document = await this.knowledge.findById(Identity.of(input.knowledgeId));
     if (!document) {
-      throw new DomainError("UpdateKnowledgeDocument: el documento no existe");
+      throw new NotFoundError("UpdateKnowledgeDocument: el documento no existe");
     }
     await this.knowledge.save(
       document.withEdits({

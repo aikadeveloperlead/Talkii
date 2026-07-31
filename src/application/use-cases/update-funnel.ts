@@ -1,4 +1,4 @@
-import { DomainError, Identity } from "@/domain";
+import { DomainError, Identity, NotFoundError } from "@/domain";
 import { FunnelRepository } from "../ports/repositories";
 
 export interface UpdateFunnelInput {
@@ -14,7 +14,7 @@ export class UpdateFunnel {
   async execute(input: UpdateFunnelInput): Promise<void> {
     const funnel = await this.funnels.findById(Identity.of(input.funnelId));
     if (!funnel) {
-      throw new DomainError("UpdateFunnel: el Funnel no existe");
+      throw new NotFoundError("UpdateFunnel: el Funnel no existe");
     }
     if (input.name && input.name !== funnel.name) {
       const existing = await this.funnels.findByName(funnel.tenantId, input.name);

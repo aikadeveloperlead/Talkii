@@ -10,6 +10,8 @@ import {
   type WebhookRow,
 } from "./webhook-mappers";
 
+import { throwIfUniqueViolation } from "./errors";
+
 function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
@@ -24,6 +26,7 @@ export class SupabaseWebhookRepository implements WebhookRepository {
 
   async save(webhook: Webhook): Promise<void> {
     const { error } = await this.db.from("webhooks").upsert(webhookToRow(webhook));
+    throwIfUniqueViolation(error, "Webhook: ya existe un Webhook con ese nombre en el Tenant");
     if (error) fail("webhooks.upsert", error);
   }
 

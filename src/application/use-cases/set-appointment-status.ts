@@ -1,4 +1,4 @@
-import { AppointmentTimelineEntry, DomainError, Identity, type AppointmentStatus } from "@/domain";
+import { type AppointmentStatus, AppointmentTimelineEntry, Identity, NotFoundError } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import { AppointmentRepository, AppointmentTimelineRepository } from "../ports/scheduling-repositories";
@@ -19,7 +19,7 @@ export class SetAppointmentStatus {
   async execute(appointmentId: string, status: AppointmentStatus): Promise<void> {
     const appointment = await this.appointments.findById(Identity.of(appointmentId));
     if (!appointment) {
-      throw new DomainError("SetAppointmentStatus: el Appointment no existe");
+      throw new NotFoundError("SetAppointmentStatus: el Appointment no existe");
     }
 
     await this.appointments.save(appointment.withStatus(status));

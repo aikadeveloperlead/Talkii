@@ -1,4 +1,4 @@
-import { CustomerTimelineEntry, DomainError, Identity } from "@/domain";
+import { CustomerTimelineEntry, DomainError, Identity, NotFoundError } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import { CustomerRepository, CustomerTimelineRepository } from "../ports/crm-repositories";
@@ -33,7 +33,7 @@ export class UpdateCustomer {
 
     const customer = await this.customers.findById(Identity.of(input.customerId));
     if (!customer) {
-      throw new DomainError("UpdateCustomer: el Customer no existe");
+      throw new NotFoundError("UpdateCustomer: el Customer no existe");
     }
 
     const { customerId: _omit, ...changes } = input;

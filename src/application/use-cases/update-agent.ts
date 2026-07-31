@@ -1,4 +1,4 @@
-import { DomainError, Identity, type CaptureField } from "@/domain";
+import { type CaptureField, DomainError, Identity, NotFoundError } from "@/domain";
 import { AgentRepository } from "../ports/repositories";
 
 /** UpdateAgent — SCR-008 §6.1 PUT /agents/:id. */
@@ -27,7 +27,7 @@ export class UpdateAgent {
   async execute(input: UpdateAgentInput): Promise<void> {
     const agent = await this.agents.findById(Identity.of(input.agentId));
     if (!agent) {
-      throw new DomainError("UpdateAgent: el Agent no existe");
+      throw new NotFoundError("UpdateAgent: el Agent no existe");
     }
 
     if (input.name && input.name !== agent.name) {

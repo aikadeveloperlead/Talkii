@@ -1,4 +1,4 @@
-import { DomainError, Identity } from "@/domain";
+import { Identity, NotFoundError } from "@/domain";
 import { AgentRepository } from "../ports/repositories";
 import { AgentKnowledgeRepository, KnowledgeRepository } from "../ports/knowledge-repositories";
 
@@ -15,10 +15,10 @@ export class LinkAgentKnowledge {
     const knowledgeIdentity = Identity.of(knowledgeId);
 
     if (!(await this.agents.findById(agentIdentity))) {
-      throw new DomainError("LinkAgentKnowledge: el Agent no existe");
+      throw new NotFoundError("LinkAgentKnowledge: el Agent no existe");
     }
     if (!(await this.knowledge.findById(knowledgeIdentity))) {
-      throw new DomainError("LinkAgentKnowledge: el documento no existe");
+      throw new NotFoundError("LinkAgentKnowledge: el documento no existe");
     }
 
     await this.agentKnowledge.link(agentIdentity, knowledgeIdentity);

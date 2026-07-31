@@ -1,4 +1,4 @@
-import { DomainError, Identity } from "@/domain";
+import { Identity, NotFoundError } from "@/domain";
 import { FunnelRepository } from "../ports/repositories";
 
 /** ReorderFunnelSteps — SCR-010 §6.2 PATCH /steps/reorder (BK-03: orden sin repetir). */
@@ -8,7 +8,7 @@ export class ReorderFunnelSteps {
   async execute(funnelId: string, orderedStepKeys: string[]): Promise<void> {
     const funnel = await this.funnels.findById(Identity.of(funnelId));
     if (!funnel) {
-      throw new DomainError("ReorderFunnelSteps: el Funnel no existe");
+      throw new NotFoundError("ReorderFunnelSteps: el Funnel no existe");
     }
 
     const stages = funnel.stages.map((stage) => {

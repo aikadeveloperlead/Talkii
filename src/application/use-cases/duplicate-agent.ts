@@ -1,4 +1,4 @@
-import { Agent, DomainError, Identity } from "@/domain";
+import { Agent, Identity, NotFoundError } from "@/domain";
 import { IdGenerator } from "../ports/id-generator";
 import { AgentRepository } from "../ports/repositories";
 
@@ -12,7 +12,7 @@ export class DuplicateAgent {
   async execute(agentId: string): Promise<{ agentId: string }> {
     const source = await this.agents.findById(Identity.of(agentId));
     if (!source) {
-      throw new DomainError("DuplicateAgent: el Agent no existe");
+      throw new NotFoundError("DuplicateAgent: el Agent no existe");
     }
 
     let name = `${source.name} (copia)`;

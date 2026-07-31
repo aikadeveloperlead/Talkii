@@ -1,4 +1,4 @@
-import { DomainError, Decision, Identity } from "@/domain";
+import { Decision, DomainError, Identity, NotFoundError } from "@/domain";
 import { IdGenerator } from "../ports/id-generator";
 import type { ChannelBindingResolver } from "../ports/channel-binding";
 import {
@@ -47,7 +47,7 @@ export class SendOperatorMessage {
       Identity.of(input.conversationId),
     );
     if (!conversation) {
-      throw new DomainError("SendOperatorMessage: la Conversation no existe");
+      throw new NotFoundError("SendOperatorMessage: la Conversation no existe");
     }
 
     const session = await this.sessions.findActiveByConversation(conversation.id);

@@ -1,4 +1,4 @@
-import { Decision, DomainError, Event, Identity, Session } from "@/domain";
+import { Decision, DomainError, Event, Identity, NotFoundError, Session } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import { ReasoningProviderError } from "../ports/reasoning-provider";
@@ -67,17 +67,17 @@ export class MakeDecision {
   async execute(input: MakeDecisionInput): Promise<MakeDecisionResult> {
     const event = await this.events.findById(Identity.of(input.eventId));
     if (!event) {
-      throw new DomainError("MakeDecision: el Event no existe");
+      throw new NotFoundError("MakeDecision: el Event no existe");
     }
 
     const session = await this.sessions.findById(event.sessionId);
     if (!session) {
-      throw new DomainError("MakeDecision: la Session del Event no existe");
+      throw new NotFoundError("MakeDecision: la Session del Event no existe");
     }
 
     const agent = await this.agents.findById(Identity.of(input.agentId));
     if (!agent) {
-      throw new DomainError("MakeDecision: el Agent no existe");
+      throw new NotFoundError("MakeDecision: el Agent no existe");
     }
 
     const funnel = input.funnelId

@@ -1,4 +1,4 @@
-import { CustomerTimelineEntry, DomainError, Identity } from "@/domain";
+import { CustomerTimelineEntry, Identity, NotFoundError } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import { CustomerRepository, CustomerTimelineRepository } from "../ports/crm-repositories";
@@ -24,7 +24,7 @@ export class UpdateCustomerTags {
   async execute(input: UpdateCustomerTagsInput): Promise<void> {
     const customer = await this.customers.findById(Identity.of(input.customerId));
     if (!customer) {
-      throw new DomainError("UpdateCustomerTags: el Customer no existe");
+      throw new NotFoundError("UpdateCustomerTags: el Customer no existe");
     }
 
     const before = new Set(customer.tags);

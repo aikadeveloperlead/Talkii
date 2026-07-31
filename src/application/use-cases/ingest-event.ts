@@ -1,4 +1,4 @@
-import { DomainError, Event, Identity } from "@/domain";
+import { DomainError, Event, Identity, NotFoundError } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import { EventRepository, SessionRepository } from "../ports/repositories";
@@ -35,7 +35,7 @@ export class IngestEvent {
 
     const session = await this.sessions.findById(sessionId);
     if (!session) {
-      throw new DomainError("IngestEvent: la Session no existe");
+      throw new NotFoundError("IngestEvent: la Session no existe");
     }
     if (!session.isActive) {
       throw new DomainError(

@@ -1,4 +1,4 @@
-import { DomainError, Event, Identity } from "@/domain";
+import { Event, Identity, NotFoundError } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import type { MessageSender, OutboundChannelTarget } from "../ports/message-sender";
@@ -41,7 +41,7 @@ export class ExecuteDecision {
   async execute(input: ExecuteDecisionInput): Promise<ExecuteDecisionResult> {
     const decision = await this.decisions.findById(Identity.of(input.decisionId));
     if (!decision) {
-      throw new DomainError("ExecuteDecision: la Decision no existe");
+      throw new NotFoundError("ExecuteDecision: la Decision no existe");
     }
 
     let executed = 0;

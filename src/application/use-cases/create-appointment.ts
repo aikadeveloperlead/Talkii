@@ -1,4 +1,4 @@
-import { Appointment, AppointmentTimelineEntry, DomainError, Identity } from "@/domain";
+import { Appointment, AppointmentTimelineEntry, DomainError, Identity, NotFoundError } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import {
@@ -44,7 +44,7 @@ export class CreateAppointment {
     const calendarId = Identity.of(input.calendarId);
     const calendar = await this.calendars.findById(calendarId);
     if (!calendar) {
-      throw new DomainError("CreateAppointment: el Calendar no existe");
+      throw new NotFoundError("CreateAppointment: el Calendar no existe");
     }
 
     const overlapping = await this.appointments.findOverlapping(

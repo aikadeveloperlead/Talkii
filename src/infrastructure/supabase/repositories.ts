@@ -55,6 +55,8 @@ import {
  * persistencia" → throw).
  */
 
+import { throwIfUniqueViolation } from "./errors";
+
 function fail(op: string, error: { message: string }): never {
   throw new Error(`Supabase ${op}: ${error.message}`);
 }
@@ -83,6 +85,7 @@ export class SupabaseAgentRepository implements AgentRepository {
 
   async save(agent: Agent): Promise<void> {
     const { error } = await this.db.from("agents").upsert(agentToRow(agent));
+    throwIfUniqueViolation(error, "Agent: ya existe un Agent con ese nombre en el Tenant");
     if (error) fail("agents.upsert", error);
   }
 
@@ -129,6 +132,7 @@ export class SupabaseFunnelRepository implements FunnelRepository {
 
   async save(funnel: Funnel): Promise<void> {
     const { error } = await this.db.from("funnels").upsert(funnelToRow(funnel));
+    throwIfUniqueViolation(error, "Funnel: ya existe un Funnel con ese nombre en el Tenant");
     if (error) fail("funnels.upsert", error);
   }
 

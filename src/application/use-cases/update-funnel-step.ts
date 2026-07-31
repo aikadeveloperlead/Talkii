@@ -1,4 +1,4 @@
-import { DomainError, Identity, type FunnelStage } from "@/domain";
+import { type FunnelStage, Identity, NotFoundError } from "@/domain";
 import { FunnelRepository } from "../ports/repositories";
 
 /** UpdateFunnelStep — SCR-010 §6.2 PUT /steps/:id (identificado por stepKey dentro del Funnel). */
@@ -12,11 +12,11 @@ export class UpdateFunnelStep {
   ): Promise<void> {
     const funnel = await this.funnels.findById(Identity.of(funnelId));
     if (!funnel) {
-      throw new DomainError("UpdateFunnelStep: el Funnel no existe");
+      throw new NotFoundError("UpdateFunnelStep: el Funnel no existe");
     }
     const index = funnel.stages.findIndex((s) => s.stepKey === stepKey);
     if (index === -1) {
-      throw new DomainError("UpdateFunnelStep: el paso no existe en el Funnel");
+      throw new NotFoundError("UpdateFunnelStep: el paso no existe en el Funnel");
     }
 
     const stages = [...funnel.stages];

@@ -1,4 +1,4 @@
-import { CustomerTimelineEntry, DomainError, Identity } from "@/domain";
+import { CustomerTimelineEntry, Identity, NotFoundError } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import { CustomerRepository, CustomerTimelineRepository } from "../ports/crm-repositories";
@@ -18,7 +18,7 @@ export class ArchiveCustomer {
   async execute(customerId: string): Promise<void> {
     const customer = await this.customers.findById(Identity.of(customerId));
     if (!customer) {
-      throw new DomainError("ArchiveCustomer: el Customer no existe");
+      throw new NotFoundError("ArchiveCustomer: el Customer no existe");
     }
 
     await this.customers.save(customer.archived(this.clock.now()));

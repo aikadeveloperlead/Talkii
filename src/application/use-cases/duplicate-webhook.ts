@@ -1,4 +1,4 @@
-import { DomainError, Identity, Webhook } from "@/domain";
+import { Identity, NotFoundError, Webhook } from "@/domain";
 import { IdGenerator } from "../ports/id-generator";
 import { WebhookRepository } from "../ports/webhook-repositories";
 
@@ -12,7 +12,7 @@ export class DuplicateWebhook {
   async execute(webhookId: string): Promise<{ webhookId: string }> {
     const source = await this.webhooks.findById(Identity.of(webhookId));
     if (!source) {
-      throw new DomainError("DuplicateWebhook: el Webhook no existe");
+      throw new NotFoundError("DuplicateWebhook: el Webhook no existe");
     }
 
     let name = `${source.name} (copia)`;

@@ -1,4 +1,4 @@
-import { DomainError, Identity } from "@/domain";
+import { Identity, NotFoundError } from "@/domain";
 import { Clock } from "../ports/clock";
 import { TemplateRepository } from "../ports/template-repository";
 
@@ -12,7 +12,7 @@ export class ArchiveTemplate {
   async execute(templateId: string): Promise<void> {
     const template = await this.templates.findById(Identity.of(templateId));
     if (!template) {
-      throw new DomainError("ArchiveTemplate: la plantilla no existe");
+      throw new NotFoundError("ArchiveTemplate: la plantilla no existe");
     }
     await this.templates.save(template.archived(this.clock.now()));
   }
