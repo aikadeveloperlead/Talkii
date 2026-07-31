@@ -57,6 +57,8 @@ import type {
   ReportsRepository,
   SessionRepository,
   TemplateRepository,
+  RateLimitResult,
+  RateLimiter,
   TenantRepository,
   WebhookDeliveryRepository,
   WebhookDeliveryResult,
@@ -576,5 +578,20 @@ export class InMemoryPreferences implements PreferencesRepository {
     return (
       [...this.repo.store.values()].find((p) => p.tenantId.equals(tenantId)) ?? null
     );
+  }
+}
+
+/**
+ * RateLimiter falso: permite las primeras `limit` llamadas por key y bloquea el
+ * resto. Registra las keys consultadas para poder afirmar el scoping por tenant.
+ */
+export class InMemoryRateLimiter implements RateLimiter {
+  keys: string[] = [];
+  private counts = new Map<string, number>();
+  async consume(key: string, limit: number): Promise<RateLimitResult> {
+    this.keys.push(key);
+    const used = (this.counts.get(key) ?? 0) + 1;
+    this.counts.set(key, used);
+    return { allowed: used <= limit, remaining: Math.max(0, limit - used) };
   }
 }

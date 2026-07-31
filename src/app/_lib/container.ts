@@ -16,6 +16,7 @@ import {
   SupabaseKnowledgeRepository,
   SupabaseLeadRepository,
   SupabasePreferencesRepository,
+  SupabaseRateLimiter,
   SupabaseReportsRepository,
   SupabaseTemplateRepository,
   SupabaseWebhookDeliveryRepository,
@@ -297,6 +298,8 @@ export function createContainer(db: SupabaseClient, options: ContainerOptions = 
       makeDecision,
       executeDecision,
       sessionInactivityTimeoutMs(),
+      new SupabaseRateLimiter(db),
+      inboundThrottle(),
     ),
     getConversationDetail: new GetConversationDetail(conversations, sessions),
     listConversationMessages: new ListConversationMessages(
@@ -419,6 +422,22 @@ export function selectReasoningProvider(): IReasoningProvider {
  * (se evalúa de forma perezosa, al resolver la Session activa de la próxima
  * request entrante, no en background).
  */
+/**
+ * Cuota de mensajes entrantes por Tenant y ventana (hallazgo HIGH de la
+ * auditoría santa-loop: el pipeline WhatsApp→LLM no tenía tope, así que
+ * cualquiera que conociera el número de un Tenant podía generar gasto de
+ * razonamiento sin límite). Configurable por entorno; el default es holgado
+ * para conversación humana normal y agresivo contra un bucle automatizado.
+ */
+function inboundThrottle(): { limit: number; windowSeconds: number } {
+  const limit = Number(process.env.INBOUND_RATE_LIMIT ?? "60");
+  const windowSeconds = Number(process.env.INBOUND_RATE_WINDOW_SECONDS ?? "60");
+  return {
+    limit: Number.isFinite(limit) && limit > 0 ? limit : 60,
+    windowSeconds: Number.isFinite(windowSeconds) && windowSeconds > 0 ? windowSeconds : 60,
+  };
+}
+
 function sessionInactivityTimeoutMs(): number {
   const hours = Number(process.env.SESSION_INACTIVITY_TIMEOUT_HOURS ?? "24");
   const safeHours = Number.isFinite(hours) && hours > 0 ? hours : 24;

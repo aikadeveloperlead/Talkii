@@ -27,6 +27,7 @@ import {
   InMemoryAgents,
   InMemoryChannelBindings,
   InMemoryConversations,
+  InMemoryRateLimiter,
   InMemoryDecisions,
   InMemoryEvents,
   InMemoryFunnels,
@@ -87,7 +88,8 @@ const binding: ChannelBinding = ChannelBinding.create(Identity.of("cb1"), {
   agentId: Identity.of("a1"),
 });
 
-function setup() {
+function setup(inboundLimit = { limit: 100, windowSeconds: 60 }) {
+  const rateLimiter = new InMemoryRateLimiter();
   const ids = new SequentialIds();
   const clock = new FixedClock();
   const agents = new InMemoryAgents();
@@ -118,9 +120,11 @@ function setup() {
     ),
     new ExecuteDecision(ids, clock, decisions, events, sender),
     24 * 60 * 60 * 1000, // 24h, mismo default que container.ts
+    rateLimiter,
+    inboundLimit,
   );
 
-  return { agents, conversations, sessions, events, decisions, sender, useCase };
+  return { agents, conversations, sessions, events, decisions, sender, useCase, rateLimiter };
 }
 
 async function seedAgent(agents: InMemoryAgents) {
@@ -280,6 +284,8 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
       ),
       new ExecuteDecision(new SequentialIds(), new FixedClock(), decisions, events, sender),
       oneHourMs,
+      new InMemoryRateLimiter(),
+      { limit: 100, windowSeconds: 60 },
     );
 
     const result = await useCase.execute(inbound);
@@ -352,6 +358,8 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
       ),
       new ExecuteDecision(ids, clock, decisions, events, sender),
       24 * 60 * 60 * 1000,
+      new InMemoryRateLimiter(),
+      { limit: 100, windowSeconds: 60 },
     );
 
     const result = await useCase.execute(inbound);
@@ -361,5 +369,42 @@ describe("HandleInboundMessage (webhook → ingest → decide → ejecuta)", () 
     const eventsOnWinner = await events.findBySession(winnerSession.id);
     expect(eventsOnWinner.some((e) => e.type === "message.received")).toBe(true);
     expect(sender.sent).toHaveLength(1);
+  });
+});
+
+describe("HandleInboundMessage — throttle del pipeline WhatsApp→LLM (hallazgo HIGH)", () => {
+  it("registra el Event pero NO decide cuando el tenant supera su cuota", async () => {
+    const { agents, conversations, decisions, sender, sessions, events, useCase } = setup({
+      limit: 2,
+      windowSeconds: 60,
+    });
+    await seedAgent(agents);
+
+    await useCase.execute(inbound);
+    await useCase.execute({ ...inbound, externalMessageId: "wamid.IN-2" });
+    const third = await useCase.execute({ ...inbound, externalMessageId: "wamid.IN-3" });
+
+    expect(third.status).toBe("rate-limited");
+    // Se respondió a los 2 primeros, no al tercero: se acotó el gasto de LLM.
+    expect(sender.sent).toHaveLength(2);
+    expect(decisions.store.size).toBe(2);
+
+    // Pero el mensaje del cliente NO se perdió: quedó como Event consultable,
+    // igual que en el caso human-controlled.
+    const conv = await conversations.findByParticipant(binding.tenantId, "whatsapp", inbound.from);
+    const allSessions = await sessions.findAllByConversation(conv!.id);
+    const received = (await events.findBySessions(allSessions.map((s) => s.id))).filter(
+      (e) => e.type === "message.received",
+    );
+    expect(received).toHaveLength(3);
+  });
+
+  it("acota por tenant, no globalmente (la key incluye el tenantId)", async () => {
+    const { agents, useCase, rateLimiter } = setup();
+    await seedAgent(agents);
+
+    await useCase.execute(inbound);
+
+    expect(rateLimiter.keys[0]).toContain(binding.tenantId.toString());
   });
 });

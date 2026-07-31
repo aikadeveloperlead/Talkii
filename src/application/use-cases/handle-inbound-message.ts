@@ -2,6 +2,7 @@ import { Channel, DomainError, Identity, Session } from "@/domain";
 import { Clock } from "../ports/clock";
 import { IdGenerator } from "../ports/id-generator";
 import type { ChannelBindingResolver } from "../ports/channel-binding";
+import type { RateLimiter } from "../ports/rate-limiter";
 import {
   ConversationRepository,
   DuplicateExternalEventError,
@@ -41,7 +42,14 @@ export type HandleInboundMessageResult =
   | { status: "processed"; decisionId: string }
   | { status: "duplicate" }
   | { status: "unbound" }
-  | { status: "human-controlled" };
+  | { status: "human-controlled" }
+  | { status: "rate-limited" };
+
+/** Cuota de mensajes entrantes por Tenant y ventana (hallazgo HIGH de auditoría). */
+export interface InboundThrottle {
+  limit: number;
+  windowSeconds: number;
+}
 
 export class HandleInboundMessage {
   constructor(
@@ -56,6 +64,13 @@ export class HandleInboundMessage {
     private readonly executeDecision: ExecuteDecision,
     /** Cierra la Session activa si su última actividad supera este umbral (item MEDIO de auditoría: SessionStatus="closed" nunca se producía). */
     private readonly inactivityTimeoutMs: number,
+    /**
+     * Acota el gasto de razonamiento por Tenant (hallazgo HIGH de la auditoría
+     * santa-loop: cualquiera que conociera el número de WhatsApp de un Tenant
+     * podía disparar llamadas al LLM sin tope alguno).
+     */
+    private readonly rateLimiter: RateLimiter,
+    private readonly inboundThrottle: InboundThrottle,
   ) {}
 
   async execute(
@@ -96,6 +111,19 @@ export class HandleInboundMessage {
     const session = await this.sessions.findById(Identity.of(sessionId));
     if (session?.operatorControl === true) {
       return { status: "human-controlled" };
+    }
+
+    // Cuota por Tenant ANTES de razonar, DESPUÉS de ingerir: el hecho de que
+    // el cliente escribió es un Event consumado y no debe perderse (mismo
+    // criterio que operatorControl arriba), pero el Decision Engine —y con él
+    // el coste del proveedor de razonamiento— sí se corta.
+    const quota = await this.rateLimiter.consume(
+      `inbound:${binding.tenantId.toString()}`,
+      this.inboundThrottle.limit,
+      this.inboundThrottle.windowSeconds,
+    );
+    if (!quota.allowed) {
+      return { status: "rate-limited" };
     }
 
     const { decisionId } = await this.makeDecision.execute({
